@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.1)
 if(POLICY CMP0046)
   cmake_policy(SET CMP0046 NEW)
 endif()
@@ -8,6 +8,9 @@ endif()
 
 # ---[ Caffe project
 project(Caffe C CXX)
+
+# 设置C++标准为 C++ 11
+set(CMAKE_CXX_STANDARD 11)
 
 # ---[ Caffe version
 set(CAFFE_TARGET_VERSION "1.0.0" CACHE STRING "Caffe logical version")
