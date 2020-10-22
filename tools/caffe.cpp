@@ -1,4 +1,5 @@
-#include "include/caffe/caffe.hpp"
+// #include "include/caffe/caffe.hpp"
+#include "../include/caffe/caffe.hpp"
 
 // using caffe::Blob;
 using caffe::Caffe;
@@ -14,14 +15,12 @@ int main(int argc, char **argv)
     string weights = "";
 
     cout << "Use CPU" << endl;
-    Caffe::set_mode(Caffe::CPU);
+    // Caffe::set_mode(Caffe::CPU);
 
     // Net<float> caffe_net(model,caffe::Test);
     // caffe_net.CopyTrainedLayersFrom(weights);
 
     // const vector<Blob<float> *> &result = caffe_net.Forward();
-
-
 
     return 0;
 }
