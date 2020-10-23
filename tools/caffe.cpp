@@ -35,7 +35,6 @@ int main(int argc, char **argv)
     Caffe::set_mode(Caffe::CPU);
 
     Net<float> caffe_net(model, caffe::TEST, 0, nullptr);
-
     // caffe_net.CopyTrainedLayersFrom(weights);
 
     // const vector<Blob<float> *> &result = caffe_net.Forward();

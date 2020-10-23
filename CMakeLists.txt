@@ -34,7 +34,7 @@ caffe_option(CPU_ONLY  "Build Caffe without CUDA support" ON) # TODO: rename to 
 caffe_option(USE_CUDNN "Build Caffe with cuDNN library support" ON IF NOT CPU_ONLY)
 caffe_option(USE_NCCL "Build Caffe with NCCL library support" OFF)
 caffe_option(BUILD_SHARED_LIBS "Build shared libraries" ON)
-caffe_option(BUILD_python "Build Python wrapper" ON)
+caffe_option(BUILD_python "Build Python wrapper" OFF)
 set(python_version "2" CACHE STRING "Specify which Python version to use")
 caffe_option(BUILD_matlab "Build Matlab wrapper" OFF IF UNIX OR APPLE)
 caffe_option(BUILD_docs   "Build documentation" OFF IF UNIX OR APPLE)
@@ -93,11 +93,11 @@ if(HAVE_CUDA)
 endif()
 
 # ---[ Subdirectories
-add_subdirectory(src/gtest)
+#add_subdirectory(src/gtest)
 add_subdirectory(src/caffe)
 add_subdirectory(tools)
 #add_subdirectory(examples)
-add_subdirectory(python)
+#add_subdirectory(python)
 #add_subdirectory(matlab)
 #add_subdirectory(docs)
 
