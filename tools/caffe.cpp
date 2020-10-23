@@ -28,9 +28,11 @@ using std::ostringstream;
 
 int main(int argc, char **argv)
 {
+    //模型与权重地址
     string model = "/home/dengshunge/Desktop/PyCharm_python3/NSPP/resnet18/使用sigmoid_改变标签编码方式/log/caffe/resnet18_deploy.prototxt";
     string weights = "/home/dengshunge/Desktop/PyCharm_python3/NSPP/resnet18/使用sigmoid_改变标签编码方式/log/caffe/solver_iter.caffemodel";
 
+    //设置工作模式:CPU or GPU
     std::cout << "Use CPU" << std::endl;
     Caffe::set_mode(Caffe::CPU);
 
