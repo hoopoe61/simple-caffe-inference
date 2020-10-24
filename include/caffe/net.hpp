@@ -19,7 +19,6 @@
 #include <utility>
 #include <vector>
 
-#include "caffe/parallel.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/hdf5.hpp"
 #include "caffe/util/insert_splits.hpp"

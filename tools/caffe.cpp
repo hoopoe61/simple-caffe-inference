@@ -38,5 +38,6 @@ int main(int argc, char **argv)
     caffe_net.CopyTrainedLayersFrom(weights);
     std::cout << "Finish loading" << std::endl;
 
-    const vector<Blob<float> *> &result = caffe_net.Forward();
+    // const vector<Blob<float> *> &result = caffe_net.Forward();
+    caffe_net.Forward();
 }

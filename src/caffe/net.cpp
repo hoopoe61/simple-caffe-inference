@@ -11,11 +11,11 @@ namespace caffe
   template <typename Dtype>
   Net<Dtype>::Net(const string &param_file, Phase phase, const int level, const vector<string> *stages)
   {
-    //1.读取并解析prototxt
+    // 1.读取并解析prototxt
     NetParameter param;
     ReadNetParamsFromTextFileOrDie(param_file, &param);
-    //2.为模型设置模式: train or test
-    // Set phase, stages and level
+
+    // 2.设置模型的phase,stage和level
     param.mutable_state()->set_phase(phase);
     //设置stage
     if (stages != NULL)
@@ -33,25 +33,26 @@ namespace caffe
   template <typename Dtype>
   void Net<Dtype>::Init(const NetParameter &in_param)
   {
-    //设置当前状态train or test
-    // Set phase from the state.
+    // 1.获取当前模型的phase(train or test)
     phase_ = in_param.state().phase();
-    // Filter layers based on their include/exclude rules and
-    // the current NetState.
-    NetParameter filtered_param;
-    FilterNet(in_param, &filtered_param); //根据规则NetStateRule,来动态构建网络
-    cout << "Initializing net from parameters: " << endl;
-    cout << filtered_param.DebugString() << endl;
 
-    // Create a copy of filtered_param with splits added where necessary.
+    // 2.根据每层的include/exclude规则和当前模型的phase,来构建网络
+    // TODO 这里应该排除train相关的层
+    NetParameter filtered_param;
+    FilterNet(in_param, &filtered_param);
+    // cout << "Initializing net from parameters: " << endl;
+    // cout << filtered_param.DebugString() << endl;
+
+    // 3.增加splits层
     NetParameter param;
-    InsertSplits(filtered_param, &param); //判断哪些层需要进行分裂
-    // Basically, build all the layers and set up their connections.
+    InsertSplits(filtered_param, &param);
+
+    // 4.建立所有层,并进行连接
     name_ = param.name();
     map<string, int> blob_name_to_idx;
     set<string> available_blobs;
     memory_used_ = 0;
-    // For each layer, set up its input and output
+    // 预分配空间
     bottom_vecs_.resize(param.layer_size());
     top_vecs_.resize(param.layer_size());
     bottom_id_vecs_.resize(param.layer_size());
@@ -60,19 +61,20 @@ namespace caffe
     bottom_need_backward_.resize(param.layer_size());
     for (int layer_id = 0; layer_id < param.layer_size(); ++layer_id)
     {
-      // Inherit phase from net if unset.
+      // 如果当前层没有设置phase,则将其设置为模型的phase
+      // 不能全部都设置为phase,因为某些层是用于train的.
       if (!param.layer(layer_id).has_phase())
       {
-        param.mutable_layer(layer_id)->set_phase(phase_); //若该层没有定义自己的phase,则使用net的phase来进行设置
+        param.mutable_layer(layer_id)->set_phase(phase_);
       }
-      // Setup layer.
-      const LayerParameter &layer_param = param.layer(layer_id);
-      layers_.push_back(LayerRegistry<Dtype>::CreateLayer(layer_param)); //创建该层
-      layer_names_.push_back(layer_param.name());
-      cout << "Creating Layer " << layer_param.name() << endl;
 
-      // Figure out this layer's input and output
-      // 画出该层的数据流向
+      // 创建层
+      const LayerParameter &layer_param = param.layer(layer_id);
+      layers_.push_back(LayerRegistry<Dtype>::CreateLayer(layer_param)); //调用工厂模式来创建
+      layer_names_.push_back(layer_param.name());
+      // cout << "Creating Layer " << layer_param.name() << endl;
+
+      // 连接该层的输入输出,即将bottom与top关联起来
       for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id)
       {
         AppendBottom(param, layer_id, bottom_id, &available_blobs, &blob_name_to_idx);
@@ -104,21 +106,16 @@ namespace caffe
           AppendTop(param, layer_id, num_top, NULL, NULL);
         }
       }
-      // After this layer is connected, set it up.
-      layers_[layer_id]->SetUp(bottom_vecs_[layer_id], top_vecs_[layer_id]); //调用layer.hpp中的SetUp()函数,这里传入了blob的指针
-      cout << "Setting up " << layer_names_[layer_id] << endl;
 
-      const int param_size = layer_param.param_size();
-      const int num_param_blobs = layers_[layer_id]->blobs().size();
-      if (!(param_size < num_param_blobs))
-      {
-        cout << "Too many params specified for layer " << layer_param.name() << endl;
-      }
+      // 当该层连接完成后,创建该层
+      layers_[layer_id]->SetUp(bottom_vecs_[layer_id], top_vecs_[layer_id]); //调用layer.hpp中的SetUp()函数,这里传入了blob的指针
+      // cout << "Setting up " << layer_names_[layer_id] << endl;
     }
-    // In the end, all remaining blobs are considered output blobs.
+
+    // 将剩下的blobs认为his输出层
     for (set<string>::iterator it = available_blobs.begin(); it != available_blobs.end(); ++it)
     {
-      cout << "This network produces output " << *it << endl;
+      // cout << "This network produces output " << *it << endl;
       net_output_blobs_.push_back(blobs_[blob_name_to_idx[*it]].get());
       net_output_blob_indices_.push_back(blob_name_to_idx[*it]);
     }
@@ -130,7 +127,6 @@ namespace caffe
     {
       layer_names_index_[layer_names_[layer_id]] = layer_id;
     }
-    ShareWeights();
     cout << "Network initialization done." << endl;
   }
 
@@ -646,19 +642,6 @@ namespace caffe
 #endif // USE_HDF5
   }
 
-  template <typename Dtype>
-  void Net<Dtype>::ShareWeights()
-  {
-    for (int i = 0; i < params_.size(); ++i)
-    {
-      if (param_owners_[i] < 0)
-      {
-        continue;
-      }
-      params_[i]->ShareData(*params_[param_owners_[i]]);
-      params_[i]->ShareDiff(*params_[param_owners_[i]]);
-    }
-  }
 
   template <typename Dtype>
   bool Net<Dtype>::has_blob(const string &blob_name) const

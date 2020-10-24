@@ -2,7 +2,6 @@
 #include <string>
 
 #include "caffe/layers/base_data_layer.hpp"
-#include "caffe/parallel.hpp"
 #include "caffe/util/blocking_queue.hpp"
 
 namespace caffe {
