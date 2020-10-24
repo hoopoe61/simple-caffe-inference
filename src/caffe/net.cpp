@@ -57,7 +57,7 @@ namespace caffe
     bottom_id_vecs_.resize(param.layer_size());
     param_id_vecs_.resize(param.layer_size());
     top_id_vecs_.resize(param.layer_size());
-    bottom_need_backward_.resize(param.layer_size());
+    bottom_need_backward_.resize(param.layer_size());//TODO 应该可以删去
     for (int layer_id = 0; layer_id < param.layer_size(); ++layer_id)
     {
       // 设置当前层的phase为test

@@ -47,95 +47,116 @@
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 
-namespace caffe {
+/**********************************
+ * 此段代码的逻辑为:
+ * 1.每个层文件最后会调用宏REGISTER_LAYER_CLASS,来进行注册;
+ * 2.在宏REGISTER_LAYER_CLASS中,会调用宏REGISTER_LAYER_CREATOR,来创建creator;
+ * 3.该creator会实例化一个类LayerRegisterer,调用LayerRegistry中的AddCreator函数来加入到一个
+ *    字典中;
+ * 4.在注册完后,之后的使用都是调用类LayerRegistry中的CreateLayer函数
+**********************************/
 
-template <typename Dtype>
-class Layer;
+namespace caffe
+{
 
-template <typename Dtype>
-class LayerRegistry {
- public:
-  typedef shared_ptr<Layer<Dtype> > (*Creator)(const LayerParameter&);
-  typedef std::map<string, Creator> CreatorRegistry;
+  template <typename Dtype>
+  class Layer;
 
-  static CreatorRegistry& Registry() {
-    static CreatorRegistry* g_registry_ = new CreatorRegistry();
-    return *g_registry_;
-  }
+  template <typename Dtype>
+  class LayerRegistry
+  {
+  public:
+    typedef shared_ptr<Layer<Dtype>> (*Creator)(const LayerParameter &);
+    typedef std::map<string, Creator> CreatorRegistry;
 
-  // Adds a creator.
-  static void AddCreator(const string& type, Creator creator) {
-    CreatorRegistry& registry = Registry();
-    CHECK_EQ(registry.count(type), 0)
-        << "Layer type " << type << " already registered.";
-    registry[type] = creator;
-  }
-
-  // Get a layer using a LayerParameter.
-  static shared_ptr<Layer<Dtype> > CreateLayer(const LayerParameter& param) {
-    // if (Caffe::root_solver()) {
-    //   LOG(INFO) << "Creating layer " << param.name();
-    // }
-    const string& type = param.type();
-    CreatorRegistry& registry = Registry();
-    CHECK_EQ(registry.count(type), 1) << "Unknown layer type: " << type
-        << " (known types: " << LayerTypeListString() << ")";
-    return registry[type](param);
-  }
-
-  static vector<string> LayerTypeList() {
-    CreatorRegistry& registry = Registry();
-    vector<string> layer_types;
-    for (typename CreatorRegistry::iterator iter = registry.begin();
-         iter != registry.end(); ++iter) {
-      layer_types.push_back(iter->first);
+    static CreatorRegistry &Registry()
+    {
+      static CreatorRegistry *g_registry_ = new CreatorRegistry();
+      return *g_registry_;
     }
-    return layer_types;
-  }
 
- private:
-  // Layer registry should never be instantiated - everything is done with its
-  // static variables.
-  LayerRegistry() {}
+    // Adds a creator.
+    static void AddCreator(const string &type, Creator creator)
+    {
+      CreatorRegistry &registry = Registry();
+      CHECK_EQ(registry.count(type), 0)
+          << "Layer type " << type << " already registered.";
+      registry[type] = creator;
+    }
 
-  static string LayerTypeListString() {
-    vector<string> layer_types = LayerTypeList();
-    string layer_types_str;
-    for (vector<string>::iterator iter = layer_types.begin();
-         iter != layer_types.end(); ++iter) {
-      if (iter != layer_types.begin()) {
-        layer_types_str += ", ";
+    // Get a layer using a LayerParameter.
+    static shared_ptr<Layer<Dtype>> CreateLayer(const LayerParameter &param)
+    {
+      // if (Caffe::root_solver()) {
+      //   LOG(INFO) << "Creating layer " << param.name();
+      // }
+      const string &type = param.type();
+      CreatorRegistry &registry = Registry();
+      CHECK_EQ(registry.count(type), 1) << "Unknown layer type: " << type
+                                        << " (known types: " << LayerTypeListString() << ")";
+      return registry[type](param);//使用LayerParameter参数来初始化该层
+    }
+
+    static vector<string> LayerTypeList()
+    {
+      CreatorRegistry &registry = Registry();
+      vector<string> layer_types;
+      for (typename CreatorRegistry::iterator iter = registry.begin();
+           iter != registry.end(); ++iter)
+      {
+        layer_types.push_back(iter->first);
       }
-      layer_types_str += *iter;
+      return layer_types;
     }
-    return layer_types_str;
-  }
-};
 
+  private:
+    // Layer registry should never be instantiated - everything is done with its
+    // static variables.
+    LayerRegistry() {}
 
-template <typename Dtype>
-class LayerRegisterer {
- public:
-  LayerRegisterer(const string& type,
-                  shared_ptr<Layer<Dtype> > (*creator)(const LayerParameter&)) {
-    // LOG(INFO) << "Registering layer type: " << type;
-    LayerRegistry<Dtype>::AddCreator(type, creator);
-  }
-};
+    // 转变成字符串,方便输出
+    static string LayerTypeListString()
+    {
+      vector<string> layer_types = LayerTypeList();
+      string layer_types_str;
+      for (vector<string>::iterator iter = layer_types.begin();
+           iter != layer_types.end(); ++iter)
+      {
+        if (iter != layer_types.begin())
+        {
+          layer_types_str += ", ";
+        }
+        layer_types_str += *iter;
+      }
+      return layer_types_str;
+    }
+  };
 
+  template <typename Dtype>
+  class LayerRegisterer
+  {
+  public:
+    LayerRegisterer(const string &type,
+                    shared_ptr<Layer<Dtype>> (*creator)(const LayerParameter &))
+    {
+      // LOG(INFO) << "Registering layer type: " << type;
+      LayerRegistry<Dtype>::AddCreator(type, creator);
+    }
+  };
 
-#define REGISTER_LAYER_CREATOR(type, creator)                                  \
-  static LayerRegisterer<float> g_creator_f_##type(#type, creator<float>);     \
-  static LayerRegisterer<double> g_creator_d_##type(#type, creator<double>)    \
+#define REGISTER_LAYER_CREATOR(type, creator)                              \
+  static LayerRegisterer<float> g_creator_f_##type(#type, creator<float>); \
+  static LayerRegisterer<double> g_creator_d_##type(#type, creator<double>)
 
-#define REGISTER_LAYER_CLASS(type)                                             \
-  template <typename Dtype>                                                    \
-  shared_ptr<Layer<Dtype> > Creator_##type##Layer(const LayerParameter& param) \
-  {                                                                            \
-    return shared_ptr<Layer<Dtype> >(new type##Layer<Dtype>(param));           \
-  }                                                                            \
+// 每个层文件最后会调用该宏定义,然后会将相应的层进行注册
+#define REGISTER_LAYER_CLASS(type)                                            \
+  template <typename Dtype>                                                   \
+  shared_ptr<Layer<Dtype>> Creator_##type##Layer(const LayerParameter &param) \
+  {                                                                           \
+    return shared_ptr<Layer<Dtype>>(new type##Layer<Dtype>(param));           \
+  }                                                                           \
   REGISTER_LAYER_CREATOR(type, Creator_##type##Layer)
 
-}  // namespace caffe
+} // namespace caffe
 
-#endif  // CAFFE_LAYER_FACTORY_H_
+#endif // CAFFE_LAYER_FACTORY_H_
