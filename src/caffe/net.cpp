@@ -339,20 +339,6 @@ namespace caffe
   }
 
   template <typename Dtype>
-  const vector<Blob<Dtype> *> &Net<Dtype>::Forward(
-      const vector<Blob<Dtype> *> &bottom, Dtype *loss)
-  {
-    LOG_EVERY_N(WARNING, 1000) << "DEPRECATED: Forward(bottom, loss) "
-                               << "will be removed in a future version. Use Forward(loss).";
-    // Copy bottom to net bottoms
-    for (int i = 0; i < bottom.size(); ++i)
-    {
-      net_input_blobs_[i]->CopyFrom(*bottom[i]);
-    }
-    return Forward(loss);
-  }
-
-  template <typename Dtype>
   void Net<Dtype>::ForwardDebugInfo(const int layer_id)
   {
     for (int top_id = 0; top_id < top_vecs_[layer_id].size(); ++top_id)
@@ -474,14 +460,7 @@ namespace caffe
   template <typename Dtype>
   void Net<Dtype>::CopyTrainedLayersFrom(const string &trained_filename)
   {
-    if (H5Fis_hdf5(trained_filename.c_str()))
-    {
-      CopyTrainedLayersFromHDF5(trained_filename);
-    }
-    else
-    {
-      CopyTrainedLayersFromBinaryProto(trained_filename);
-    }
+    CopyTrainedLayersFromBinaryProto(trained_filename);
   }
 
   template <typename Dtype>
@@ -491,69 +470,6 @@ namespace caffe
     NetParameter param;
     ReadNetParamsFromBinaryFileOrDie(trained_filename, &param);
     CopyTrainedLayersFrom(param);
-  }
-
-  template <typename Dtype>
-  void Net<Dtype>::CopyTrainedLayersFromHDF5(const string &trained_filename)
-  {
-#ifdef USE_HDF5
-    hid_t file_hid = H5Fopen(trained_filename.c_str(), H5F_ACC_RDONLY,
-                             H5P_DEFAULT);
-    CHECK_GE(file_hid, 0) << "Couldn't open " << trained_filename;
-    hid_t data_hid = H5Gopen2(file_hid, "data", H5P_DEFAULT);
-    CHECK_GE(data_hid, 0) << "Error reading weights from " << trained_filename;
-    int num_layers = hdf5_get_num_links(data_hid);
-    for (int i = 0; i < num_layers; ++i)
-    {
-      string source_layer_name = hdf5_get_name_by_idx(data_hid, i);
-      if (!layer_names_index_.count(source_layer_name))
-      {
-        LOG(INFO) << "Ignoring source layer " << source_layer_name;
-        continue;
-      }
-      int target_layer_id = layer_names_index_[source_layer_name];
-      DLOG(INFO) << "Copying source layer " << source_layer_name;
-      vector<shared_ptr<Blob<Dtype>>> &target_blobs =
-          layers_[target_layer_id]->blobs();
-      hid_t layer_hid = H5Gopen2(data_hid, source_layer_name.c_str(),
-                                 H5P_DEFAULT);
-      CHECK_GE(layer_hid, 0)
-          << "Error reading weights from " << trained_filename;
-      // Check that source layer doesn't have more params than target layer
-      int num_source_params = hdf5_get_num_links(layer_hid);
-      CHECK_LE(num_source_params, target_blobs.size())
-          << "Incompatible number of blobs for layer " << source_layer_name;
-      for (int j = 0; j < target_blobs.size(); ++j)
-      {
-        ostringstream oss;
-        oss << j;
-        string dataset_name = oss.str();
-        int target_net_param_id = param_id_vecs_[target_layer_id][j];
-        if (!H5Lexists(layer_hid, dataset_name.c_str(), H5P_DEFAULT))
-        {
-          // Target param doesn't exist in source weights...
-          if (param_owners_[target_net_param_id] != -1)
-          {
-            // ...but it's weight-shared in target, so that's fine.
-            continue;
-          }
-          else
-          {
-            LOG(FATAL) << "Incompatible number of blobs for layer "
-                       << source_layer_name;
-          }
-        }
-        hdf5_load_nd_dataset(layer_hid, dataset_name.c_str(), 0, kMaxBlobAxes,
-                             target_blobs[j].get());
-      }
-      H5Gclose(layer_hid);
-    }
-    H5Gclose(data_hid);
-    H5Fclose(file_hid);
-#else
-    LOG(FATAL) << "CopyTrainedLayersFromHDF5 requires hdf5;"
-               << " compile with USE_HDF5.";
-#endif // USE_HDF5
   }
 
   template <typename Dtype>
@@ -642,51 +558,10 @@ namespace caffe
 #endif // USE_HDF5
   }
 
-
-  template <typename Dtype>
-  bool Net<Dtype>::has_blob(const string &blob_name) const
-  {
-    return blob_names_index_.find(blob_name) != blob_names_index_.end();
-  }
-
-  template <typename Dtype>
-  const shared_ptr<Blob<Dtype>> Net<Dtype>::blob_by_name(
-      const string &blob_name) const
-  {
-    shared_ptr<Blob<Dtype>> blob_ptr;
-    if (has_blob(blob_name))
-    {
-      blob_ptr = blobs_[blob_names_index_.find(blob_name)->second];
-    }
-    else
-    {
-      blob_ptr.reset((Blob<Dtype> *)(NULL));
-      LOG(WARNING) << "Unknown blob name " << blob_name;
-    }
-    return blob_ptr;
-  }
-
   template <typename Dtype>
   bool Net<Dtype>::has_layer(const string &layer_name) const
   {
     return layer_names_index_.find(layer_name) != layer_names_index_.end();
-  }
-
-  template <typename Dtype>
-  const shared_ptr<Layer<Dtype>> Net<Dtype>::layer_by_name(
-      const string &layer_name) const
-  {
-    shared_ptr<Layer<Dtype>> layer_ptr;
-    if (has_layer(layer_name))
-    {
-      layer_ptr = layers_[layer_names_index_.find(layer_name)->second];
-    }
-    else
-    {
-      layer_ptr.reset((Layer<Dtype> *)(NULL));
-      LOG(WARNING) << "Unknown layer name " << layer_name;
-    }
-    return layer_ptr;
   }
 
   INSTANTIATE_CLASS(Net);
