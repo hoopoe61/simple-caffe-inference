@@ -45,33 +45,8 @@ namespace caffe
     /// @brief Initialize a network with a NetParameter.
     void Init(const NetParameter &param);
 
-    /**
-   * @brief Run Forward and return the result.
-   *
-   */
+    ///@brief Run Forward and return the result.
     const vector<Blob<Dtype> *> &Forward(Dtype *loss = NULL);
-    // /// @brief DEPRECATED; use Forward() instead.
-    // const vector<Blob<Dtype> *> &ForwardPrefilled(Dtype *loss = NULL)
-    // {
-    //   LOG_EVERY_N(WARNING, 1000) << "DEPRECATED: ForwardPrefilled() "
-    //                              << "will be removed in a future version. Use Forward().";
-    //   return Forward(loss);
-    // }
-
-    /**
-   * The From and To variants of Forward and Backward operate on the
-   * (topological) ordering by which the net is specified. For general DAG
-   * networks, note that (1) computing from one layer to another might entail
-   * extra computation on unrelated branches, and (2) computation starting in
-   * the middle may be incorrect if all of the layers of a fan-in are not
-   * included.
-   */
-    Dtype ForwardFromTo(int start, int end);
-    Dtype ForwardFrom(int start);
-    Dtype ForwardTo(int end);
-    /// @brief DEPRECATED; set input blobs then use Forward() instead.
-    const vector<Blob<Dtype> *> &Forward(const vector<Blob<Dtype> *> &bottom,
-                                         Dtype *loss = NULL);
 
     /**
    * @brief Zeroes out the diffs of all net parameters.
@@ -108,16 +83,6 @@ namespace caffe
       return 0;
     }
 
-    /// @brief Updates the network weights based on the diff values computed.
-    void Update();
-    /**
-   * @brief Shares weight data of owner blobs with shared blobs.
-   *
-   * Note: this is called by Net::Init, and thus should normally not be
-   * called manually.
-   */
-    void ShareWeights();
-
     /**
    * @brief For an already initialized net, implicitly copies (i.e., using no
    *        additional memory) the pre-trained layers from another Net.
@@ -132,7 +97,6 @@ namespace caffe
     void CopyTrainedLayersFrom(const NetParameter &param);
     void CopyTrainedLayersFrom(const string &trained_filename);
     void CopyTrainedLayersFromBinaryProto(const string &trained_filename);
-    void CopyTrainedLayersFromHDF5(const string &trained_filename);
     /// @brief Writes the net to a proto.
     void ToProto(NetParameter *param, bool write_diff = false) const;
     /// @brief Writes the net to an HDF5 file.

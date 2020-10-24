@@ -37,21 +37,20 @@ namespace caffe
     phase_ = in_param.state().phase();
 
     // 2.根据每层的include/exclude规则和当前模型的phase,来构建网络
-    // TODO 这里应该排除train相关的层
     NetParameter filtered_param;
     FilterNet(in_param, &filtered_param);
-    // cout << "Initializing net from parameters: " << endl;
-    // cout << filtered_param.DebugString() << endl;
+    // LOG_IF(INFO, Caffe::root_solver())
+    //     << "Initializing net from parameters: " << std::endl
+    //     << filtered_param.DebugString(); //输出网络prototxt的内容
 
     // 3.增加splits层
     NetParameter param;
-    InsertSplits(filtered_param, &param);
+    InsertSplits(filtered_param, &param); //TODO 里面具有可优化的空间
 
     // 4.建立所有层,并进行连接
     name_ = param.name();
     map<string, int> blob_name_to_idx;
     set<string> available_blobs;
-    memory_used_ = 0;
     // 预分配空间
     bottom_vecs_.resize(param.layer_size());
     top_vecs_.resize(param.layer_size());
@@ -61,18 +60,15 @@ namespace caffe
     bottom_need_backward_.resize(param.layer_size());
     for (int layer_id = 0; layer_id < param.layer_size(); ++layer_id)
     {
-      // 如果当前层没有设置phase,则将其设置为模型的phase
-      // 不能全部都设置为phase,因为某些层是用于train的.
-      if (!param.layer(layer_id).has_phase())
-      {
-        param.mutable_layer(layer_id)->set_phase(phase_);
-      }
+      // 设置当前层的phase为test
+      param.mutable_layer(layer_id)->set_phase(phase_);
 
       // 创建层
       const LayerParameter &layer_param = param.layer(layer_id);
       layers_.push_back(LayerRegistry<Dtype>::CreateLayer(layer_param)); //调用工厂模式来创建
       layer_names_.push_back(layer_param.name());
-      // cout << "Creating Layer " << layer_param.name() << endl;
+      // LOG_IF(INFO, Caffe::root_solver())
+      //     << "Creating Layer " << layer_param.name();
 
       // 连接该层的输入输出,即将bottom与top关联起来
       for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id)
@@ -109,13 +105,15 @@ namespace caffe
 
       // 当该层连接完成后,创建该层
       layers_[layer_id]->SetUp(bottom_vecs_[layer_id], top_vecs_[layer_id]); //调用layer.hpp中的SetUp()函数,这里传入了blob的指针
-      // cout << "Setting up " << layer_names_[layer_id] << endl;
+      // LOG_IF(INFO, Caffe::root_solver())
+      //     << "Setting up " << layer_names_[layer_id];
     }
 
-    // 将剩下的blobs认为his输出层
+    // 将剩下的blobs认为是输出层
     for (set<string>::iterator it = available_blobs.begin(); it != available_blobs.end(); ++it)
     {
-      // cout << "This network produces output " << *it << endl;
+      LOG_IF(INFO, Caffe::root_solver())
+          << "This network produces output " << *it;
       net_output_blobs_.push_back(blobs_[blob_name_to_idx[*it]].get());
       net_output_blob_indices_.push_back(blob_name_to_idx[*it]);
     }
@@ -127,7 +125,7 @@ namespace caffe
     {
       layer_names_index_[layer_names_[layer_id]] = layer_id;
     }
-    cout << "Network initialization done." << endl;
+    LOG_IF(INFO, Caffe::root_solver()) << "Network initialization done.";
   }
 
   template <typename Dtype>
@@ -140,15 +138,14 @@ namespace caffe
     {
       const LayerParameter &layer_param = param.layer(i);
       const string &layer_name = layer_param.name();
-      if (!(layer_param.include_size() == 0 || layer_param.exclude_size() == 0))
-      {
-        cout << "Specify either include rules or exclude rules; not both." << endl;
-      }
-      // If no include rules are specified, the layer is included by default and
-      // only excluded if it meets one of the exclude rules.
+      // 不能同时设置include和exclude
+      CHECK(layer_param.include_size() == 0 || layer_param.exclude_size() == 0)
+          << "Specify either include rules or exclude rules; not both.";
+      // 如果该层的include规则没有被指定,则默认是include,只有遇到exclude规则是,才将其排除在外
       bool layer_included = (layer_param.include_size() == 0); //若在prototxt文件的层中,没有包含Include参数,则默认为true
       for (int j = 0; layer_included && j < layer_param.exclude_size(); ++j)
       {
+        // 当没有include,但存在exclude规则时
         if (StateMeetsRule(net_state, layer_param.exclude(j), layer_name))
         {
           layer_included = false;
@@ -156,6 +153,7 @@ namespace caffe
       }
       for (int j = 0; !layer_included && j < layer_param.include_size(); ++j)
       {
+        //
         if (StateMeetsRule(net_state, layer_param.include(j), layer_name))
         {
           layer_included = true;
@@ -168,82 +166,19 @@ namespace caffe
     }
   }
 
-  template <typename Dtype> //判断是否特定的规则,如果不符合,则返回false
-  bool Net<Dtype>::StateMeetsRule(const NetState &state, const NetStateRule &rule, const string &layer_name)
+  // 判断是否特定的规则,如果不符合,则返回false
+  template <typename Dtype>
+  bool Net<Dtype>::StateMeetsRule(const NetState &state,
+                                  const NetStateRule &rule, const string &layer_name)
   {
-    // Check whether the rule is broken due to phase.
-    if (rule.has_phase())
+    // 如果当前层的的规则与模型的phase不一致,则返回false
+    if (rule.has_phase() && (rule.phase() != state.phase()))
     {
-      if (rule.phase() != state.phase())
-      {
-        //如果当前层的phase与网络的phase不一致
-        cout << "The NetState phase (" << state.phase()
-             << ") differed from the phase (" << rule.phase()
-             << ") specified by a rule in layer " << layer_name << endl;
-        return false;
-      }
-    }
-    // Check whether the rule is broken due to min level.
-    if (rule.has_min_level())
-    {
-      if (state.level() < rule.min_level())
-      {
-        cout << "The NetState level (" << state.level()
-             << ") is above the min_level (" << rule.min_level()
-             << ") specified by a rule in layer " << layer_name << endl;
-        return false;
-      }
-    }
-    // Check whether the rule is broken due to max level.
-    if (rule.has_max_level())
-    {
-      if (state.level() > rule.max_level())
-      {
-        cout << "The NetState level (" << state.level()
-             << ") is above the max_level (" << rule.max_level()
-             << ") specified by a rule in layer " << layer_name << endl;
-        return false;
-      }
-    }
-    // Check whether the rule is broken due to stage. The NetState must
-    // contain ALL of the rule's stages to meet it.
-    for (int i = 0; i < rule.stage_size(); ++i)
-    {
-      // Check that the NetState contains the rule's ith stage.
-      bool has_stage = false;
-      for (int j = 0; !has_stage && j < state.stage_size(); ++j)
-      {
-        if (rule.stage(i) == state.stage(j))
-        {
-          has_stage = true;
-        }
-      }
-      if (!has_stage)
-      {
-        cout << "The NetState did not contain stage '" << rule.stage(i)
-             << "' specified by a rule in layer " << layer_name << endl;
-        return false;
-      }
-    }
-    // Check whether the rule is broken due to not_stage. The NetState must
-    // contain NONE of the rule's not_stages to meet it.
-    for (int i = 0; i < rule.not_stage_size(); ++i)
-    {
-      // Check that the NetState contains the rule's ith not_stage.
-      bool has_stage = false;
-      for (int j = 0; !has_stage && j < state.stage_size(); ++j)
-      {
-        if (rule.not_stage(i) == state.stage(j))
-        {
-          has_stage = true;
-        }
-      }
-      if (has_stage)
-      {
-        cout << "The NetState contained a not_stage '" << rule.not_stage(i)
-             << "' specified by a rule in layer " << layer_name << endl;
-        return false;
-      }
+      LOG_IF(INFO, Caffe::root_solver())
+          << "The NetState phase (" << state.phase()
+          << ") differed from the phase (" << rule.phase()
+          << ") specified by a rule in layer " << layer_name;
+      return false;
     }
     return true;
   }
@@ -257,11 +192,12 @@ namespace caffe
     shared_ptr<LayerParameter> layer_param(new LayerParameter(param.layer(layer_id)));
     const string &blob_name = (layer_param->top_size() > top_id) ? layer_param->top(top_id) : "(automatic)";
     // Check if we are doing in-place computation
-    if (blob_name_to_idx && layer_param->bottom_size() > top_id && blob_name == layer_param->bottom(top_id))
+    if (blob_name_to_idx && layer_param->bottom_size() > top_id &&
+        blob_name == layer_param->bottom(top_id))
     {
       // In-place computation
-      cout << layer_param->name() << " -> " << blob_name << " (in-place)" << endl;
-      ;
+      // LOG_IF(INFO, Caffe::root_solver())
+      //     << layer_param->name() << " -> " << blob_name << " (in-place)";
       top_vecs_[layer_id].push_back(blobs_[(*blob_name_to_idx)[blob_name]].get());
       top_id_vecs_[layer_id].push_back((*blob_name_to_idx)[blob_name]);
     }
@@ -270,13 +206,16 @@ namespace caffe
     {
       // If we are not doing in-place computation but have duplicated blobs,
       // raise an error.
-      cout << "Top blob '" << blob_name << "' produced by multiple sources." << endl;
-      throw;
+      LOG(FATAL) << "Top blob '" << blob_name
+                 << "' produced by multiple sources.";
     }
     else
     {
       // Normal output.
-      cout << layer_param->name() << " -> " << blob_name << endl;
+      // if (Caffe::root_solver())
+      // {
+      //   LOG(INFO) << layer_param->name() << " -> " << blob_name;
+      // }
       shared_ptr<Blob<Dtype>> blob_pointer(new Blob<Dtype>());
       const int blob_id = blobs_.size();
       blobs_.push_back(blob_pointer);
@@ -305,16 +244,22 @@ namespace caffe
     const string &blob_name = layer_param.bottom(bottom_id); //bottom的名字,这是上一层的内容,在AppendTop中已经创建过
     if (available_blobs->find(blob_name) == available_blobs->end())
     {
-      cout << "Unknown bottom blob '" << blob_name << "' (layer '"
-           << layer_param.name() << "', bottom index " << bottom_id << ")" << endl;
-      throw;
+      LOG(FATAL) << "Unknown bottom blob '" << blob_name << "' (layer '"
+                 << layer_param.name() << "', bottom index " << bottom_id << ")";
     }
     const int blob_id = (*blob_name_to_idx)[blob_name];
-    cout << layer_names_[layer_id] << " <- " << blob_name << endl;
+    // LOG_IF(INFO, Caffe::root_solver())
+    //     << layer_names_[layer_id] << " <- " << blob_name;
     bottom_vecs_[layer_id].push_back(blobs_[blob_id].get()); //压入已经在AppendTop中初始化过的指针
     bottom_id_vecs_[layer_id].push_back(blob_id);
     available_blobs->erase(blob_name);
-    bottom_need_backward_[layer_id].push_back(false);
+    bool need_backward = blob_need_backward_[blob_id];
+    // Check if the backpropagation on bottom_id should be skipped
+    if (layer_param.propagate_down_size() > 0)
+    {
+      need_backward = layer_param.propagate_down(bottom_id);
+    }
+    bottom_need_backward_[layer_id].push_back(need_backward);
     return blob_id;
   }
 

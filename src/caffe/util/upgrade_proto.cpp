@@ -75,6 +75,7 @@ namespace caffe
       }
     }
     // NetParameter uses old style input fields; try to upgrade it.
+    // 更新输入层
     if (NetNeedsInputUpgrade(*param))
     {
       LOG(INFO) << "Attempting to upgrade input file specified using deprecated "
@@ -86,6 +87,7 @@ namespace caffe
                    << "input layers and not input fields.";
     }
     // NetParameter uses old style batch norm layers; try to upgrade it.
+    // 更新BN层
     if (NetNeedsBatchNormUpgrade(*param))
     {
       LOG(INFO) << "Attempting to upgrade batch norm layers using deprecated "
@@ -100,8 +102,10 @@ namespace caffe
   void ReadNetParamsFromTextFileOrDie(const string &param_file,
                                       NetParameter *param)
   {
+    //解析deploy文件,放在param中
     CHECK(ReadProtoFromTextFile(param_file, param))
         << "Failed to parse NetParameter file: " << param_file;
+    //更新相关内容
     UpgradeNetAsNeeded(param_file, param);
   }
 
@@ -990,6 +994,7 @@ namespace caffe
 
   bool NetNeedsInputUpgrade(const NetParameter &net_param)
   {
+    //判断是否具有一个或以上的输入层
     return net_param.input_size() > 0;
   }
 
@@ -1063,8 +1068,7 @@ namespace caffe
         // set lr_mult and decay_mult to zero. leave all other param intact.
         for (int ip = 0; ip < net_param->layer(i).param_size(); ip++)
         {
-          ParamSpec *fixed_param_spec =
-              net_param->mutable_layer(i)->mutable_param(ip);
+          ParamSpec *fixed_param_spec = net_param->mutable_layer(i)->mutable_param(ip);
           fixed_param_spec->set_lr_mult(0.f);
           fixed_param_spec->set_decay_mult(0.f);
         }
