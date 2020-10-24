@@ -51,13 +51,13 @@ namespace caffe
    *
    */
     const vector<Blob<Dtype> *> &Forward(Dtype *loss = NULL);
-    /// @brief DEPRECATED; use Forward() instead.
-    const vector<Blob<Dtype> *> &ForwardPrefilled(Dtype *loss = NULL)
-    {
-      LOG_EVERY_N(WARNING, 1000) << "DEPRECATED: ForwardPrefilled() "
-                                 << "will be removed in a future version. Use Forward().";
-      return Forward(loss);
-    }
+    // /// @brief DEPRECATED; use Forward() instead.
+    // const vector<Blob<Dtype> *> &ForwardPrefilled(Dtype *loss = NULL)
+    // {
+    //   LOG_EVERY_N(WARNING, 1000) << "DEPRECATED: ForwardPrefilled() "
+    //                              << "will be removed in a future version. Use Forward().";
+    //   return Forward(loss);
+    // }
 
     /**
    * The From and To variants of Forward and Backward operate on the
@@ -78,17 +78,18 @@ namespace caffe
    * @brief Zeroes out the diffs of all net parameters.
    *        Should be run before Backward.
    */
-    void ClearParamDiffs();
+    void ClearParamDiffs(){};
 
     /**
    * The network backward should take no input and output, since it solely
    * computes the gradient w.r.t the parameters, and the data has already been
    * provided during the forward pass.
    */
-    void Backward();
-    void BackwardFromTo(int start, int end);
-    void BackwardFrom(int start);
-    void BackwardTo(int end);
+    //TODO 直接返回空
+    void Backward(){};
+    void BackwardFromTo(int start, int end){};
+    void BackwardFrom(int start){};
+    void BackwardTo(int end){};
 
     /**
    * @brief Reshape all layers from bottom to top.
@@ -100,10 +101,12 @@ namespace caffe
 
     Dtype ForwardBackward()
     {
-      Dtype loss;
-      Forward(&loss);
-      Backward();
-      return loss;
+      //TODO 直接返回结果
+      // Dtype loss;
+      // Forward(&loss);
+      // Backward();
+      // return loss;
+      return 0;
     }
 
     /// @brief Updates the network weights based on the diff values computed.

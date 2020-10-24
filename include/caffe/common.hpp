@@ -96,6 +96,8 @@ namespace caffe
   using std::string;
   using std::stringstream;
   using std::vector;
+  using std::cout;
+  using std::endl;
 
   // A global initialization function that you should call in your main function.
   // Currently it initializes google flags and google logging.
