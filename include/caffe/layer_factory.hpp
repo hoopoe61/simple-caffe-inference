@@ -56,6 +56,13 @@
  * 4.在注册完后,之后的使用都是调用类LayerRegistry中的CreateLayer函数
 **********************************/
 
+/*********************************
+ * 注意:这里有两种方式来注册层:
+ * 1.利用宏REGISTER_LAYER_CLASS来进行注册;
+ * 2.利用宏REGISTER_LAYER_CREATOR来进行注册.
+ * 两者区别在于是否具有creator.建议使用REGISTER_LAYER_CLASS来进行注册.
+**********************************/
+
 namespace caffe
 {
 
@@ -94,7 +101,7 @@ namespace caffe
       CreatorRegistry &registry = Registry();
       CHECK_EQ(registry.count(type), 1) << "Unknown layer type: " << type
                                         << " (known types: " << LayerTypeListString() << ")";
-      return registry[type](param);//使用LayerParameter参数来初始化该层
+      return registry[type](param); //使用LayerParameter参数来初始化该层
     }
 
     static vector<string> LayerTypeList()

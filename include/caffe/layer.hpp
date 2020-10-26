@@ -53,7 +53,7 @@ namespace caffe
         for (int i = 0; i < layer_param_.blobs_size(); ++i)
         {
           blobs_[i].reset(new Blob<Dtype>());
-          blobs_[i]->FromProto(layer_param_.blobs(i));
+          blobs_[i]->FromProto(layer_param_.blobs(i)); //这里有第二个参数,默认是true
         }
       }
     }
@@ -75,10 +75,10 @@ namespace caffe
     void SetUp(const vector<Blob<Dtype> *> &bottom,
                const vector<Blob<Dtype> *> &top)
     {
-      CheckBlobCounts(bottom, top);
-      LayerSetUp(bottom, top);
-      Reshape(bottom, top);
-      SetLossWeights(top);
+      CheckBlobCounts(bottom, top); //检查输入输出是否符合规定
+      LayerSetUp(bottom, top);      //虚函数,只执行一次,对该层进行特定操作
+      Reshape(bottom, top);         //虚函数,对输出的特征设置维度
+      SetLossWeights(top);          //设置每个损失的损失权重
     }
 
     /**
