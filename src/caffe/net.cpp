@@ -57,7 +57,7 @@ namespace caffe
     bottom_id_vecs_.resize(param.layer_size());
     param_id_vecs_.resize(param.layer_size());
     top_id_vecs_.resize(param.layer_size());
-    bottom_need_backward_.resize(param.layer_size());//TODO 应该可以删去
+    // bottom_need_backward_.resize(param.layer_size()); //TODO 应该可以删去
     for (int layer_id = 0; layer_id < param.layer_size(); ++layer_id)
     {
       // 设置当前层的phase为test
@@ -71,6 +71,10 @@ namespace caffe
       //     << "Creating Layer " << layer_param.name();
 
       // 连接该层的输入输出,即将bottom与top关联起来
+      // input层的bottom.size()=0,所以会从appendTop开始
+      // 因此,下面appendTop()和AppendBottom()的逻辑为:
+      // 1.通过AppendTop()来创建blob指针,及保存起blob_name和blob_id
+      // 2.然后在下一层的AppendBottom()中根据blob_name来查找到top中对应的blob,以此来关联起来
       for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id)
       {
         AppendBottom(param, layer_id, bottom_id, &available_blobs, &blob_name_to_idx);
@@ -87,6 +91,7 @@ namespace caffe
           net_input_blobs_.push_back(blobs_[blob_id].get());
         }
       }
+      //TODO 这里没有用到,需要理解一下
       // If the layer specifies that AutoTopBlobs() -> true and the LayerParameter
       // specified fewer than the required number (as specified by
       // ExactNumTopBlobs() or MinTopBlobs()), allocate them here.
@@ -110,20 +115,14 @@ namespace caffe
     }
 
     // 将剩下的blobs认为是输出层
+    // 在AppendBottom()中erase相应的blob_name,在AppendTop()中插入相应的blob_name
+    // 因此,在输出层中,最后执行的是AppendTop(),会剩下blob_name,即对应输出层
     for (set<string>::iterator it = available_blobs.begin(); it != available_blobs.end(); ++it)
     {
       LOG_IF(INFO, Caffe::root_solver())
           << "This network produces output " << *it;
       net_output_blobs_.push_back(blobs_[blob_name_to_idx[*it]].get());
       net_output_blob_indices_.push_back(blob_name_to_idx[*it]);
-    }
-    for (size_t blob_id = 0; blob_id < blob_names_.size(); ++blob_id)
-    {
-      blob_names_index_[blob_names_[blob_id]] = blob_id;
-    }
-    for (size_t layer_id = 0; layer_id < layer_names_.size(); ++layer_id)
-    {
-      layer_names_index_[layer_names_[layer_id]] = layer_id;
     }
     LOG_IF(INFO, Caffe::root_solver()) << "Network initialization done.";
   }
@@ -191,21 +190,23 @@ namespace caffe
   {
     shared_ptr<LayerParameter> layer_param(new LayerParameter(param.layer(layer_id)));
     const string &blob_name = (layer_param->top_size() > top_id) ? layer_param->top(top_id) : "(automatic)";
-    // Check if we are doing in-place computation
+    // 检查是否是in-place操作,主要判断依据是比较top的名字是否和bottom的名字相同
     if (blob_name_to_idx && layer_param->bottom_size() > top_id &&
         blob_name == layer_param->bottom(top_id))
     {
       // In-place computation
       // LOG_IF(INFO, Caffe::root_solver())
       //     << layer_param->name() << " -> " << blob_name << " (in-place)";
+      // 在一开始,已经为top_vecs_预分配了空间
+      // get()是作用于智能指针上,返回其对应的指针
+      // 因为是in-place操作,之前已经保存在具有相同名字的blob,所以这里直接取对指针即可,指向同一个内存位置
       top_vecs_[layer_id].push_back(blobs_[(*blob_name_to_idx)[blob_name]].get());
       top_id_vecs_[layer_id].push_back((*blob_name_to_idx)[blob_name]);
     }
     else if (blob_name_to_idx &&
              blob_name_to_idx->find(blob_name) != blob_name_to_idx->end())
     {
-      // If we are not doing in-place computation but have duplicated blobs,
-      // raise an error.
+      // 如果不进行in-place计算,但又存在重复的blobs,则会报错
       LOG(FATAL) << "Top blob '" << blob_name
                  << "' produced by multiple sources.";
     }
@@ -218,15 +219,14 @@ namespace caffe
       // }
       shared_ptr<Blob<Dtype>> blob_pointer(new Blob<Dtype>());
       const int blob_id = blobs_.size();
-      blobs_.push_back(blob_pointer);
+      blobs_.push_back(blob_pointer); //保存其智能指针
       blob_names_.push_back(blob_name);
-      blob_need_backward_.push_back(false);
       if (blob_name_to_idx)
       {
-        (*blob_name_to_idx)[blob_name] = blob_id;
+        (*blob_name_to_idx)[blob_name] = blob_id; //保存每个blob名字对应的id
       }
-      top_id_vecs_[layer_id].push_back(blob_id);
       top_vecs_[layer_id].push_back(blob_pointer.get());
+      top_id_vecs_[layer_id].push_back(blob_id);
     }
     if (available_blobs)
     {
@@ -241,9 +241,10 @@ namespace caffe
                                map<string, int> *blob_name_to_idx)
   {
     const LayerParameter &layer_param = param.layer(layer_id);
-    const string &blob_name = layer_param.bottom(bottom_id); //bottom的名字,这是上一层的内容,在AppendTop中已经创建过
+    const string &blob_name = layer_param.bottom(bottom_id); //bottom的名字,对应的是上一层的top,在AppendTop中已经创建过
     if (available_blobs->find(blob_name) == available_blobs->end())
     {
+      // 检查是否在之前创建过该blob
       LOG(FATAL) << "Unknown bottom blob '" << blob_name << "' (layer '"
                  << layer_param.name() << "', bottom index " << bottom_id << ")";
     }
@@ -253,13 +254,6 @@ namespace caffe
     bottom_vecs_[layer_id].push_back(blobs_[blob_id].get()); //压入已经在AppendTop中初始化过的指针
     bottom_id_vecs_[layer_id].push_back(blob_id);
     available_blobs->erase(blob_name);
-    bool need_backward = blob_need_backward_[blob_id];
-    // Check if the backpropagation on bottom_id should be skipped
-    if (layer_param.propagate_down_size() > 0)
-    {
-      need_backward = layer_param.propagate_down(bottom_id);
-    }
-    bottom_need_backward_[layer_id].push_back(need_backward);
     return blob_id;
   }
 
@@ -502,13 +496,7 @@ namespace caffe
     LOG(FATAL) << "ToHDF5 requires hdf5; compile with USE_HDF5.";
 #endif // USE_HDF5
   }
-
-  template <typename Dtype>
-  bool Net<Dtype>::has_layer(const string &layer_name) const
-  {
-    return layer_names_index_.find(layer_name) != layer_names_index_.end();
-  }
-
+  
   INSTANTIATE_CLASS(Net);
 
 } // namespace caffe

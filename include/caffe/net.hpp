@@ -150,10 +150,10 @@ namespace caffe
       CHECK_LT(i, bottom_id_vecs_.size()) << "Invalid layer id";
       return bottom_id_vecs_[i];
     }
-    inline const vector<vector<bool>> &bottom_need_backward() const
-    {
-      return bottom_need_backward_;
-    }
+    // inline const vector<vector<bool>> &bottom_need_backward() const
+    // {
+    //   return bottom_need_backward_;
+    // }
     inline const vector<Dtype> &blob_loss_weights() const
     {
       return blob_loss_weights_;
@@ -285,27 +285,25 @@ namespace caffe
     /// @brief The phase: TRAIN or TEST
     Phase phase_;
     /// @brief Individual layers in the net
-    vector<shared_ptr<Layer<Dtype>>> layers_;
-    vector<string> layer_names_;
-    map<string, int> layer_names_index_;
-    vector<bool> layer_need_backward_;
+    vector<shared_ptr<Layer<Dtype>>> layers_; //保存每一层
+    vector<string> layer_names_;              //每个layer的名字
+    vector<bool> layer_need_backward_;        //对应每一层是否需要后传
     /// @brief the blobs storing intermediate results between the layer.
-    vector<shared_ptr<Blob<Dtype>>> blobs_;
-    vector<string> blob_names_;
-    map<string, int> blob_names_index_;
-    vector<bool> blob_need_backward_;
+    vector<shared_ptr<Blob<Dtype>>> blobs_; //存储层与层之间的中间结果
+    vector<string> blob_names_;             //每个blob的名字
+    // vector<bool> blob_need_backward_;
     /// bottom_vecs stores the vectors containing the input for each layer.
     /// They don't actually host the blobs (blobs_ does), so we simply store
     /// pointers.
     vector<vector<Blob<Dtype> *>> bottom_vecs_;
     vector<vector<int>> bottom_id_vecs_;
-    vector<vector<bool>> bottom_need_backward_;
+    // vector<vector<bool>> bottom_need_backward_;
     /// top_vecs stores the vectors containing the output for each layer
     vector<vector<Blob<Dtype> *>> top_vecs_;
     vector<vector<int>> top_id_vecs_;
     /// Vector of weight in the loss (or objective) function of each net blob,
     /// indexed by blob_id.
-    vector<Dtype> blob_loss_weights_;
+    vector<Dtype> blob_loss_weights_; //每个blob的损失权重
     vector<vector<int>> param_id_vecs_;
     vector<int> param_owners_;
     vector<string> param_display_names_;
@@ -313,9 +311,9 @@ namespace caffe
     map<string, int> param_names_index_;
     /// blob indices for the input and the output of the net
     vector<int> net_input_blob_indices_;
-    vector<int> net_output_blob_indices_;
+    vector<int> net_output_blob_indices_; //网络输出层index
     vector<Blob<Dtype> *> net_input_blobs_;
-    vector<Blob<Dtype> *> net_output_blobs_;
+    vector<Blob<Dtype> *> net_output_blobs_; //网络输出层
     /// The parameters in the network.
     vector<shared_ptr<Blob<Dtype>>> params_;
     vector<Blob<Dtype> *> learnable_params_;
