@@ -47,6 +47,7 @@ namespace caffe
     {
       // Set phase and copy blobs (if there are any).
       phase_ = param.phase();
+      //TODO 对比一下这里,这里的layer_param_.blobs_size()都为0,表示可学习的参数都没有
       if (layer_param_.blobs_size() > 0)
       {
         blobs_.resize(layer_param_.blobs_size());
@@ -72,13 +73,14 @@ namespace caffe
    * Sets up the loss weight multiplier blobs for any non-zero loss weights.
    * This method may not be overridden.
    */
+    /// 检查bottom和top的blobs的数量是否正确
     void SetUp(const vector<Blob<Dtype> *> &bottom,
                const vector<Blob<Dtype> *> &top)
     {
       CheckBlobCounts(bottom, top); //检查输入输出是否符合规定
       LayerSetUp(bottom, top);      //虚函数,只执行一次,对该层进行特定操作
       Reshape(bottom, top);         //虚函数,对输出的特征设置维度
-      SetLossWeights(top);          //设置每个损失的损失权重
+      // SetLossWeights(top);          //设置每个损失的损失权重
     }
 
     /**
@@ -313,7 +315,7 @@ namespace caffe
     /** The phase: TRAIN or TEST */
     Phase phase_;
     /** The vector that stores the learnable parameters as a set of blobs. */
-    vector<shared_ptr<Blob<Dtype>>> blobs_;
+    vector<shared_ptr<Blob<Dtype>>> blobs_; //存储可学习的参数
     /** Vector indicating whether to compute the diff of each param blob. */
     vector<bool> param_propagate_down_;
 
@@ -407,31 +409,31 @@ namespace caffe
       }
     }
 
-    /**
-   * Called by SetUp to initialize the weights associated with any top blobs in
-   * the loss function. Store non-zero loss weights in the diff blob.
-   */
-    inline void SetLossWeights(const vector<Blob<Dtype> *> &top)
-    {
-      const int num_loss_weights = layer_param_.loss_weight_size();
-      if (num_loss_weights)
-      {
-        CHECK_EQ(top.size(), num_loss_weights) << "loss_weight must be "
-                                                  "unspecified or specified once per top blob.";
-        for (int top_id = 0; top_id < top.size(); ++top_id)
-        {
-          const Dtype loss_weight = layer_param_.loss_weight(top_id);
-          if (loss_weight == Dtype(0))
-          {
-            continue;
-          }
-          this->set_loss(top_id, loss_weight);
-          const int count = top[top_id]->count();
-          Dtype *loss_multiplier = top[top_id]->mutable_cpu_diff();
-          caffe_set(count, loss_weight, loss_multiplier);
-        }
-      }
-    }
+  //   /**
+  //  * Called by SetUp to initialize the weights associated with any top blobs in
+  //  * the loss function. Store non-zero loss weights in the diff blob.
+  //  */
+  //   inline void SetLossWeights(const vector<Blob<Dtype> *> &top)
+  //   {
+  //     const int num_loss_weights = layer_param_.loss_weight_size();
+  //     if (num_loss_weights)
+  //     {
+  //       CHECK_EQ(top.size(), num_loss_weights) << "loss_weight must be "
+  //                                                 "unspecified or specified once per top blob.";
+  //       for (int top_id = 0; top_id < top.size(); ++top_id)
+  //       {
+  //         const Dtype loss_weight = layer_param_.loss_weight(top_id);
+  //         if (loss_weight == Dtype(0))
+  //         {
+  //           continue;
+  //         }
+  //         this->set_loss(top_id, loss_weight);
+  //         const int count = top[top_id]->count();
+  //         Dtype *loss_multiplier = top[top_id]->mutable_cpu_diff();
+  //         caffe_set(count, loss_weight, loss_multiplier);
+  //       }
+  //     }
+  //   }
 
   private:
     DISABLE_COPY_AND_ASSIGN(Layer);
@@ -450,34 +452,34 @@ namespace caffe
     {
     case Caffe::CPU:
       Forward_cpu(bottom, top);
-      for (int top_id = 0; top_id < top.size(); ++top_id)
-      {
-        if (!this->loss(top_id))
-        {
-          continue;
-        }
-        const int count = top[top_id]->count();
-        const Dtype *data = top[top_id]->cpu_data();
-        const Dtype *loss_weights = top[top_id]->cpu_diff();
-        loss += caffe_cpu_dot(count, data, loss_weights);
-      }
+      // for (int top_id = 0; top_id < top.size(); ++top_id)
+      // {
+      //   if (!this->loss(top_id))
+      //   {
+      //     continue;
+      //   }
+      //   const int count = top[top_id]->count();
+      //   const Dtype *data = top[top_id]->cpu_data();
+      //   const Dtype *loss_weights = top[top_id]->cpu_diff();
+      //   loss += caffe_cpu_dot(count, data, loss_weights);
+      // }
       break;
     case Caffe::GPU:
       Forward_gpu(bottom, top);
 #ifndef CPU_ONLY
-      for (int top_id = 0; top_id < top.size(); ++top_id)
-      {
-        if (!this->loss(top_id))
-        {
-          continue;
-        }
-        const int count = top[top_id]->count();
-        const Dtype *data = top[top_id]->gpu_data();
-        const Dtype *loss_weights = top[top_id]->gpu_diff();
-        Dtype blob_loss = 0;
-        caffe_gpu_dot(count, data, loss_weights, &blob_loss);
-        loss += blob_loss;
-      }
+      // for (int top_id = 0; top_id < top.size(); ++top_id)
+      // {
+      //   if (!this->loss(top_id))
+      //   {
+      //     continue;
+      //   }
+      //   const int count = top[top_id]->count();
+      //   const Dtype *data = top[top_id]->gpu_data();
+      //   const Dtype *loss_weights = top[top_id]->gpu_diff();
+      //   Dtype blob_loss = 0;
+      //   caffe_gpu_dot(count, data, loss_weights, &blob_loss);
+      //   loss += blob_loss;
+      // }
 #endif
       break;
     default:
@@ -491,17 +493,17 @@ namespace caffe
                                      const vector<bool> &propagate_down,
                                      const vector<Blob<Dtype> *> &bottom)
   {
-    switch (Caffe::mode())
-    {
-    case Caffe::CPU:
-      Backward_cpu(top, propagate_down, bottom);
-      break;
-    case Caffe::GPU:
-      Backward_gpu(top, propagate_down, bottom);
-      break;
-    default:
-      LOG(FATAL) << "Unknown caffe mode.";
-    }
+    // switch (Caffe::mode())
+    // {
+    // case Caffe::CPU:
+    //   Backward_cpu(top, propagate_down, bottom);
+    //   break;
+    // case Caffe::GPU:
+    //   Backward_gpu(top, propagate_down, bottom);
+    //   break;
+    // default:
+    //   LOG(FATAL) << "Unknown caffe mode.";
+    // }
   }
 
   // Serialize LayerParameter to protocol buffer
