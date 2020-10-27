@@ -48,12 +48,6 @@ namespace caffe
     const vector<Blob<Dtype> *> &Forward(Dtype *loss = NULL);
 
     /**
-   * @brief Zeroes out the diffs of all net parameters.
-   *        Should be run before Backward.
-   */
-    void ClearParamDiffs(){};
-
-    /**
    * The network backward should take no input and output, since it solely
    * computes the gradient w.r.t the parameters, and the data has already been
    * provided during the forward pass.
@@ -72,16 +66,6 @@ namespace caffe
    */
     void Reshape();
 
-    Dtype ForwardBackward()
-    {
-      //TODO 直接返回结果
-      // Dtype loss;
-      // Forward(&loss);
-      // Backward();
-      // return loss;
-      return 0;
-    }
-
     /**
    * @brief For an already initialized net, implicitly copies (i.e., using no
    *        additional memory) the pre-trained layers from another Net.
@@ -98,8 +82,6 @@ namespace caffe
     void CopyTrainedLayersFromBinaryProto(const string &trained_filename);
     /// @brief Writes the net to a proto.
     void ToProto(NetParameter *param, bool write_diff = false) const;
-    /// @brief Writes the net to an HDF5 file.
-    void ToHDF5(const string &filename, bool write_diff = false) const;
 
     /// @brief returns the network name.
     inline const string &name() const { return name_; }
@@ -149,38 +131,10 @@ namespace caffe
       CHECK_LT(i, bottom_id_vecs_.size()) << "Invalid layer id";
       return bottom_id_vecs_[i];
     }
-    // inline const vector<vector<bool>> &bottom_need_backward() const
-    // {
-    //   return bottom_need_backward_;
-    // }
-    inline const vector<Dtype> &blob_loss_weights() const
-    {
-      return blob_loss_weights_;
-    }
-    inline const vector<bool> &layer_need_backward() const
-    {
-      return layer_need_backward_;
-    }
     /// @brief returns the parameters
     inline const vector<shared_ptr<Blob<Dtype>>> &params() const
     {
       return params_;
-    }
-    inline const vector<Blob<Dtype> *> &learnable_params() const
-    {
-      return learnable_params_;
-    }
-    /// @brief returns the learnable parameter learning rate multipliers
-    inline const vector<float> &params_lr() const { return params_lr_; }
-    inline const vector<bool> &has_params_lr() const { return has_params_lr_; }
-    /// @brief returns the learnable parameter decay multipliers
-    inline const vector<float> &params_weight_decay() const
-    {
-      return params_weight_decay_;
-    }
-    inline const vector<bool> &has_params_decay() const
-    {
-      return has_params_decay_;
     }
     const map<string, int> &param_names_index() const
     {
@@ -274,8 +228,6 @@ namespace caffe
 
     /// @brief Helper for displaying debug info in Forward.
     void ForwardDebugInfo(const int layer_id);
-    /// @brief Helper for displaying debug info in Backward.
-    void BackwardDebugInfo(const int layer_id);
     /// @brief Helper for displaying debug info in Update.
     void UpdateDebugInfo(const int param_id);
 
@@ -286,7 +238,6 @@ namespace caffe
     /// @brief Individual layers in the net
     vector<shared_ptr<Layer<Dtype>>> layers_; //保存每一层
     vector<string> layer_names_;              //每个layer的名字
-    vector<bool> layer_need_backward_;        //对应每一层是否需要后传
     /// @brief the blobs storing intermediate results between the layer.
     vector<shared_ptr<Blob<Dtype>>> blobs_; //存储层与层之间的中间结果
     vector<string> blob_names_;             //每个blob的名字
@@ -302,7 +253,6 @@ namespace caffe
     vector<vector<int>> top_id_vecs_;
     /// Vector of weight in the loss (or objective) function of each net blob,
     /// indexed by blob_id.
-    vector<Dtype> blob_loss_weights_; //每个blob的损失权重
     vector<vector<int>> param_id_vecs_;
     vector<int> param_owners_;
     vector<string> param_display_names_;
@@ -315,23 +265,7 @@ namespace caffe
     vector<Blob<Dtype> *> net_output_blobs_; //网络输出层
     /// The parameters in the network.
     vector<shared_ptr<Blob<Dtype>>> params_;
-    vector<Blob<Dtype> *> learnable_params_;
-    /**
-   * The mapping from params_ -> learnable_params_: we have
-   * learnable_param_ids_.size() == params_.size(),
-   * and learnable_params_[learnable_param_ids_[i]] == params_[i].get()
-   * if and only if params_[i] is an "owner"; otherwise, params_[i] is a sharer
-   * and learnable_params_[learnable_param_ids_[i]] gives its owner.
-   */
-    vector<int> learnable_param_ids_;
-    /// the learning rate multipliers for learnable_params_
-    vector<float> params_lr_;
-    vector<bool> has_params_lr_;
-    /// the weight decay multipliers for learnable_params_
-    vector<float> params_weight_decay_;
-    vector<bool> has_params_decay_;
-    /// The bytes of memory used by this net
-    size_t memory_used_;
+
     /// Whether to compute and display debug info for the net.
     bool debug_info_;
     // Callbacks
