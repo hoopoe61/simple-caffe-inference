@@ -13,14 +13,12 @@ namespace bp = boost::python;
 
 #include "boost/algorithm/string.hpp"
 #include "caffe/caffe.hpp"
-#include "caffe/util/signal_handler.h"
 
 using caffe::Blob;
 using caffe::Caffe;
 using caffe::Layer;
 using caffe::Net;
 using caffe::shared_ptr;
-using caffe::Solver;
 using caffe::string;
 using caffe::Timer;
 using caffe::vector;
