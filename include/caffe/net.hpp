@@ -241,13 +241,11 @@ namespace caffe
     /// @brief the blobs storing intermediate results between the layer.
     vector<shared_ptr<Blob<Dtype>>> blobs_; //存储层与层之间的中间结果
     vector<string> blob_names_;             //每个blob的名字
-    // vector<bool> blob_need_backward_;
     /// bottom_vecs stores the vectors containing the input for each layer.
     /// They don't actually host the blobs (blobs_ does), so we simply store
     /// pointers.
     vector<vector<Blob<Dtype> *>> bottom_vecs_;
     vector<vector<int>> bottom_id_vecs_;
-    // vector<vector<bool>> bottom_need_backward_;
     /// top_vecs stores the vectors containing the output for each layer
     vector<vector<Blob<Dtype> *>> top_vecs_;
     vector<vector<int>> top_id_vecs_;

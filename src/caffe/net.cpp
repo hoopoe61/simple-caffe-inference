@@ -57,7 +57,6 @@ namespace caffe
     bottom_id_vecs_.resize(param.layer_size());
     param_id_vecs_.resize(param.layer_size());
     top_id_vecs_.resize(param.layer_size());
-    // bottom_need_backward_.resize(param.layer_size()); //TODO 应该可以删去
     for (int layer_id = 0; layer_id < param.layer_size(); ++layer_id)
     {
       // 设置当前层的phase为test
@@ -91,7 +90,7 @@ namespace caffe
           net_input_blobs_.push_back(blobs_[blob_id].get());
         }
       }
-      //TODO 这里没有用到,需要理解一下
+      // 满足对top blob的需求
       // If the layer specifies that AutoTopBlobs() -> true and the LayerParameter
       // specified fewer than the required number (as specified by
       // ExactNumTopBlobs() or MinTopBlobs()), allocate them here.

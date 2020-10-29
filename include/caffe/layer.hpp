@@ -150,7 +150,7 @@ namespace caffe
     ///此函数没用,只是保留接口,保持与原版caffe一致
     inline void Backward(const vector<Blob<Dtype> *> &top,
                          const vector<bool> &propagate_down,
-                         const vector<Blob<Dtype> *> &bottom) {};
+                         const vector<Blob<Dtype> *> &bottom){};
 
     /**
    * @brief Returns the vector of learnable parameter blobs.

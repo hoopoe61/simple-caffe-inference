@@ -10,12 +10,13 @@ namespace caffe
     if (!thread_instance_.get())
     {
       //如果该handle为空,返回新的
-      thread_instance_.reset(new Caffe()); //TODO 需要记得释放
+      thread_instance_.reset(new Caffe());
     }
     return *(thread_instance_.get());
   }
 
-  Caffe::Caffe() : mode_(Caffe::CPU)
+  Caffe::Caffe()
+      : mode_(Caffe::CPU)
   {
   }
 

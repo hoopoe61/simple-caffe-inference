@@ -41,7 +41,7 @@ namespace caffe
       }
       count_ *= shape[i];
       shape_[i] = shape[i];
-      shape_data[i] = shape[i];
+      shape_data[i] = shape[i]; //放入到SyncedMemory的内存中
     }
     if (count_ > capacity_)
     {
