@@ -83,6 +83,8 @@ namespace caffe
   using boost::shared_ptr;
 
   // Common functions and classes from std that caffe often uses.
+  using std::cout;
+  using std::endl;
   using std::fstream;
   using std::ios;
   using std::isinf;
@@ -96,8 +98,6 @@ namespace caffe
   using std::string;
   using std::stringstream;
   using std::vector;
-  using std::cout;
-  using std::endl;
 
   // A global initialization function that you should call in your main function.
   // Currently it initializes google flags and google logging.

@@ -9,26 +9,40 @@
 
 namespace caffe
 {
+  /**
+   * 注意,存在如下几组关系:
+   * 1.data层没有bottom blob,只有top blob;
+   * 2.第i层的top blob name与第i+1层的bottom blob name相同.
+   * 3.需要理解下述代码,主要了解这几种结构既可以
+   *                                                       ----------
+   *                                                |--->  |  conv  |  ---> ...
+   * ----------      ----------      ----------     |      ----------
+   * |  data  |  ->  |  conv  |  ->  |  conv  |  ---|
+   * ----------      ----------      ----------     |      ----------
+   *                                                |--->  |  conv  |  ---> ...
+   *                                                       ----------
+   * 
+  */
 
   void InsertSplits(const NetParameter &param, NetParameter *param_split)
   {
     // Initialize by copying from the input NetParameter.
     param_split->CopyFrom(param);
     param_split->clear_layer();
-    map<string, pair<int, int>> blob_name_to_last_top_idx;
-    map<pair<int, int>, pair<int, int>> bottom_idx_to_source_top_idx;
-    map<pair<int, int>, int> top_idx_to_bottom_count;
-    map<pair<int, int>, float> top_idx_to_loss_weight;
-    map<pair<int, int>, int> top_idx_to_bottom_split_idx;
-    map<int, string> layer_idx_to_layer_name;
+    map<string, pair<int, int>> blob_name_to_last_top_idx;            //key:blob_name ;vlue:(第i层,第j个blob).存储blob name及其对应的第i层
+    map<pair<int, int>, pair<int, int>> bottom_idx_to_source_top_idx; //将bottom与top关联起来
+    map<pair<int, int>, int> top_idx_to_bottom_count;                 //top blob对应的bottom blob的数量
+    map<pair<int, int>, int> top_idx_to_bottom_split_idx;             //top blob切割成n份bottom时对应的idx
+    map<int, string> layer_idx_to_layer_name;                         //idx与层名字
+    //读取所有层的信息,建立相邻层之间blob的连接信息
     for (int i = 0; i < param.layer_size(); ++i)
     {
       const LayerParameter &layer_param = param.layer(i);
       layer_idx_to_layer_name[i] = layer_param.name();
       for (int j = 0; j < layer_param.bottom_size(); ++j)
       {
+        // 一开始的data层没有bottom
         const string &blob_name = layer_param.bottom(j);
-        cout << blob_name << endl;
         if (blob_name_to_last_top_idx.find(blob_name) ==
             blob_name_to_last_top_idx.end())
         {
@@ -36,34 +50,22 @@ namespace caffe
                      << layer_param.name() << "', bottom index " << j << ")";
         }
         const pair<int, int> &bottom_idx = make_pair(i, j);
-        const pair<int, int> &top_idx = blob_name_to_last_top_idx[blob_name];
-        bottom_idx_to_source_top_idx[bottom_idx] = top_idx;
-        ++top_idx_to_bottom_count[top_idx];
+        const pair<int, int> &top_idx = blob_name_to_last_top_idx[blob_name]; //这个blob与上一个top的blob
+        bottom_idx_to_source_top_idx[bottom_idx] = top_idx;                   //将bottom与top关联起来
+        ++top_idx_to_bottom_count[top_idx];                                   //上一个top blob数量加1.多个bottom可能对对应同一个top,因此top blob的数量会增多
       }
       for (int j = 0; j < layer_param.top_size(); ++j)
       {
         const string &blob_name = layer_param.top(j);
-        blob_name_to_last_top_idx[blob_name] = make_pair(i, j);
-      }
-      // A use of a top blob as a loss should be handled similarly to the use of
-      // a top blob as a bottom blob to another layer.
-      const int last_loss =
-          std::min(layer_param.loss_weight_size(), layer_param.top_size());
-      for (int j = 0; j < last_loss; ++j)
-      {
-        const string &blob_name = layer_param.top(j);
-        const pair<int, int> &top_idx = blob_name_to_last_top_idx[blob_name];
-        top_idx_to_loss_weight[top_idx] = layer_param.loss_weight(j);
-        if (top_idx_to_loss_weight[top_idx])
-        {
-          ++top_idx_to_bottom_count[top_idx];
-        }
+        blob_name_to_last_top_idx[blob_name] = make_pair(i, j); //value: (第i层,第j个blob)
       }
     }
+    // 判断哪些层需要创建split
     for (int i = 0; i < param.layer_size(); ++i)
     {
       LayerParameter *layer_param = param_split->add_layer();
       layer_param->CopyFrom(param.layer(i));
+      // 使用split layer的输出来替换任何共享的bottom blobs
       // Replace any shared bottom blobs with split layer outputs.
       for (int j = 0; j < layer_param->bottom_size(); ++j)
       {
@@ -72,6 +74,7 @@ namespace caffe
         const int split_count = top_idx_to_bottom_count[top_idx];
         if (split_count > 1)
         {
+          //如果多于1个blob,则需要split
           const string &layer_name = layer_idx_to_layer_name[top_idx.first];
           const string &blob_name = layer_param->bottom(j);
           layer_param->set_bottom(j, SplitBlobName(layer_name,
@@ -83,20 +86,14 @@ namespace caffe
       for (int j = 0; j < layer_param->top_size(); ++j)
       {
         const pair<int, int> &top_idx = make_pair(i, j);
-        const int split_count = top_idx_to_bottom_count[top_idx];
+        const int split_count = top_idx_to_bottom_count[top_idx]; //这个top需要split成n份
         if (split_count > 1)
         {
           const string &layer_name = layer_idx_to_layer_name[i];
           const string &blob_name = layer_param->top(j);
           LayerParameter *split_layer_param = param_split->add_layer();
-          const float loss_weight = top_idx_to_loss_weight[top_idx];
           ConfigureSplitLayer(layer_name, blob_name, j, split_count,
-                              loss_weight, split_layer_param);
-          if (loss_weight)
-          {
-            layer_param->clear_loss_weight();
-            top_idx_to_bottom_split_idx[top_idx]++;
-          }
+                              0, split_layer_param);
         }
       }
     }
@@ -114,17 +111,6 @@ namespace caffe
     {
       split_layer_param->add_top(
           SplitBlobName(layer_name, blob_name, blob_idx, k));
-      if (loss_weight)
-      {
-        if (k == 0)
-        {
-          split_layer_param->add_loss_weight(loss_weight);
-        }
-        else
-        {
-          split_layer_param->add_loss_weight(0);
-        }
-      }
     }
   }
 

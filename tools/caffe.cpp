@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     std::cout << "blob name : " << caffe_net.blob_names()[0] << std::endl;
     std::cout << caffe_net.num_outputs() << std::endl;
     // const vector<Blob<float> *> &result = caffe_net.Forward();
-    // caffe_net.Forward();
+    caffe_net.Forward();
 }
 #else
 using namespace caffe; // NOLINT(build/namespaces)
