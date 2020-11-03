@@ -375,10 +375,11 @@ namespace caffe
           layers_[target_layer_id]->blobs();
       CHECK_EQ(target_blobs.size(), source_layer.blobs_size())
           << "Incompatible number of blobs for layer " << source_layer_name;
-      for (int j = 0; j < target_blobs.size(); ++j)
+      for (int j = 0; j < target_blobs.size(); ++j) //例如conv层的size=2,分别是权重与偏置(也可能size=1)
       {
         if (!target_blobs[j]->ShapeEquals(source_layer.blobs(j)))
         {
+          //TODO 既然形状不一致,不应该直接报错吗?还这么多操作?
           Blob<Dtype> source_blob;
           const bool kReshape = true;
           source_blob.FromProto(source_layer.blobs(j), kReshape);
@@ -423,7 +424,7 @@ namespace caffe
       layers_[i]->ToProto(layer_param, write_diff);
     }
   }
-  
+
   INSTANTIATE_CLASS(Net);
 
 } // namespace caffe

@@ -16,14 +16,14 @@ namespace caffe
     // Configure the kernel size, padding, stride, and inputs.
     ConvolutionParameter conv_param = this->layer_param_.convolution_param();
     force_nd_im2col_ = conv_param.force_nd_im2col();
-    channel_axis_ = bottom[0]->CanonicalAxisIndex(conv_param.axis());
-    const int first_spatial_axis = channel_axis_ + 1;
-    const int num_axes = bottom[0]->num_axes();
-    num_spatial_axes_ = num_axes - first_spatial_axis;
+    channel_axis_ = bottom[0]->CanonicalAxisIndex(conv_param.axis()); //channel_axis_ =1
+    const int first_spatial_axis = channel_axis_ + 1;                 //first_spatial_axis=2
+    const int num_axes = bottom[0]->num_axes();                       //num_axes=4
+    num_spatial_axes_ = num_axes - first_spatial_axis;                //num_spatial_axes_=2
     CHECK_GE(num_spatial_axes_, 0);
     vector<int> spatial_dim_blob_shape(1, std::max(num_spatial_axes_, 1));
     // Setup filter kernel dimensions (kernel_shape_).
-    kernel_shape_.Reshape(spatial_dim_blob_shape);
+    kernel_shape_.Reshape(spatial_dim_blob_shape); //shape=2
     int *kernel_shape_data = kernel_shape_.mutable_cpu_data();
     if (conv_param.has_kernel_h() || conv_param.has_kernel_w())
     {
@@ -157,10 +157,10 @@ namespace caffe
     for (int i = 0; i < num_spatial_axes_; ++i)
     {
       weight_shape.push_back(kernel_shape_data[i]);
-    }
+    } //卷积核的尺寸[output_channel,input_channel,kernel_height,kernel_width]
     bias_term_ = this->layer_param_.convolution_param().bias_term();
     vector<int> bias_shape(bias_term_, num_output_);
-    if (this->blobs_.size() > 0)
+    if (this->blobs_.size() > 0) //一般this->blobs_.size()=0，因此还没有初始化其大小
     {
       CHECK_EQ(1 + bias_term_, this->blobs_.size())
           << "Incorrect number of weight blobs.";
@@ -205,7 +205,7 @@ namespace caffe
         bias_filler->Fill(this->blobs_[1].get());
       }
     }
-    kernel_dim_ = this->blobs_[0]->count(1);
+    kernel_dim_ = this->blobs_[0]->count(1); // input_channel*kernel_height*kernel_width
     weight_offset_ = conv_out_channels_ * kernel_dim_ / group_;
     // Propagate gradients to the parameters (as directed by backward pass).
     this->param_propagate_down_.resize(this->blobs_.size(), true);
@@ -215,15 +215,16 @@ namespace caffe
   void BaseConvolutionLayer<Dtype>::Reshape(const vector<Blob<Dtype> *> &bottom,
                                             const vector<Blob<Dtype> *> &top)
   {
-    const int first_spatial_axis = channel_axis_ + 1;
+    const int first_spatial_axis = channel_axis_ + 1; //first_spatial_axis=2
     CHECK_EQ(bottom[0]->num_axes(), first_spatial_axis + num_spatial_axes_)
         << "bottom num_axes may not change.";
-    num_ = bottom[0]->count(0, channel_axis_);
+    num_ = bottom[0]->count(0, channel_axis_); //batch size
     CHECK_EQ(bottom[0]->shape(channel_axis_), channels_)
         << "Input size incompatible with convolution kernel.";
     // TODO: generalize to handle inputs of different shapes.
     for (int bottom_id = 1; bottom_id < bottom.size(); ++bottom_id)
     {
+      // 存在多个bottom
       CHECK(bottom[0]->shape() == bottom[bottom_id]->shape())
           << "shape mismatch - bottom[0]: " << bottom[0]->shape_string()
           << " vs. bottom[" << bottom_id << "]: "
@@ -238,7 +239,7 @@ namespace caffe
     for (int i = 0; i < num_spatial_axes_; ++i)
     {
       top_shape.push_back(output_shape_[i]);
-    }
+    } // top_shape = [batch_size,output_channel,feature_height,feature_width]
     for (int top_id = 0; top_id < top.size(); ++top_id)
     {
       top[top_id]->Reshape(top_shape);
@@ -249,12 +250,12 @@ namespace caffe
     }
     else
     {
-      conv_out_spatial_dim_ = top[0]->count(first_spatial_axis);
+      conv_out_spatial_dim_ = top[0]->count(first_spatial_axis); // feature_height * feature_width
     }
-    col_offset_ = kernel_dim_ * conv_out_spatial_dim_;
+    col_offset_ = kernel_dim_ * conv_out_spatial_dim_; //TODO 代表什么含义
     output_offset_ = conv_out_channels_ * conv_out_spatial_dim_ / group_;
     // Setup input dimensions (conv_input_shape_).
-    vector<int> bottom_dim_blob_shape(1, num_spatial_axes_ + 1);
+    vector<int> bottom_dim_blob_shape(1, num_spatial_axes_ + 1);//[3]
     conv_input_shape_.Reshape(bottom_dim_blob_shape);
     int *conv_input_shape_data = conv_input_shape_.mutable_cpu_data();
     for (int i = 0; i < num_spatial_axes_ + 1; ++i)
@@ -265,7 +266,7 @@ namespace caffe
       }
       else
       {
-        conv_input_shape_data[i] = bottom[0]->shape(channel_axis_ + i);
+        conv_input_shape_data[i] = bottom[0]->shape(channel_axis_ + i);//input的shape
       }
     }
     // The im2col result buffer will only hold one image at a time to avoid

@@ -112,6 +112,7 @@ namespace caffe
   void ReadNetParamsFromBinaryFileOrDie(const string &param_file,
                                         NetParameter *param)
   {
+    //解析二进制文件
     CHECK(ReadProtoFromBinaryFile(param_file, param))
         << "Failed to parse NetParameter file: " << param_file;
     UpgradeNetAsNeeded(param_file, param);

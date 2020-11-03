@@ -600,6 +600,7 @@ namespace caffe
     Dtype *data_vec = mutable_cpu_data();
     if (proto.double_data_size() > 0)
     {
+      //数据类别是double
       CHECK_EQ(count_, proto.double_data_size());
       for (int i = 0; i < count_; ++i)
       {
