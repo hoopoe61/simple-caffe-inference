@@ -9,13 +9,12 @@
 
 namespace caffe
 {
-
     /**
- * @brief Provides data to the Net by assigning tops directly.
- *
- * This data layer is a container that merely holds the data assigned to it;
- * forward, backward, and reshape are all no-ops.
- */
+     * @brief Provides data to the Net by assigning tops directly.
+     *
+     * This data layer is a container that merely holds the data assigned to it;
+     * forward, backward, and reshape are all no-ops.
+     */
     template <typename Dtype>
     class InputLayer : public Layer<Dtype>
     {
@@ -35,10 +34,8 @@ namespace caffe
     protected:
         virtual void Forward_cpu(const vector<Blob<Dtype> *> &bottom,
                                  const vector<Blob<Dtype> *> &top) {}
-        virtual void Backward_cpu(const vector<Blob<Dtype> *> &top,
-                                  const vector<bool> &propagate_down, const vector<Blob<Dtype> *> &bottom) {}
     };
 
-} // namespace caffe
+} //namespace caffe
 
-#endif // CAFFE_INPUT_LAYER_HPP_
+#endif

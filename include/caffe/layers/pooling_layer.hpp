@@ -11,10 +11,10 @@ namespace caffe
 {
 
     /**
- * @brief Pools the input image by taking the max, average, etc. within regions.
- *
- * TODO(dox): thorough documentation for Forward, Backward, and proto params.
- */
+     * @brief Pools the input image by taking the max, average, etc. within regions.
+     *
+     * TODO(dox): thorough documentation for Forward, Backward, and proto params.
+     */
     template <typename Dtype>
     class PoolingLayer : public Layer<Dtype>
     {
@@ -33,21 +33,12 @@ namespace caffe
         // others can only output the pooled inputs.
         virtual inline int MaxTopBlobs() const
         {
-            return (this->layer_param_.pooling_param().pool() ==
-                    PoolingParameter_PoolMethod_MAX)
-                       ? 2
-                       : 1;
+            return (this->layer_param_.pooling_param().pool() == PoolingParameter_PoolMethod_MAX) ? 2 : 1;
         }
 
     protected:
         virtual void Forward_cpu(const vector<Blob<Dtype> *> &bottom,
                                  const vector<Blob<Dtype> *> &top);
-        virtual void Forward_gpu(const vector<Blob<Dtype> *> &bottom,
-                                 const vector<Blob<Dtype> *> &top);
-        virtual void Backward_cpu(const vector<Blob<Dtype> *> &top,
-                                  const vector<bool> &propagate_down, const vector<Blob<Dtype> *> &bottom);
-        virtual void Backward_gpu(const vector<Blob<Dtype> *> &top,
-                                  const vector<bool> &propagate_down, const vector<Blob<Dtype> *> &bottom);
 
         int kernel_h_, kernel_w_;
         int stride_h_, stride_w_;

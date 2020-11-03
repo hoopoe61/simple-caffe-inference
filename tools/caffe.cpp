@@ -1,7 +1,6 @@
-#ifdef WITH_PYTHON_LAYER
-#include "boost/python.hpp"
-namespace bp = boost::python;
-#endif
+#include "caffe/caffe.hpp"
+#include <string>
+#include <vector>
 
 #ifdef USE_OPENCV
 #include <opencv2/core/core.hpp>
@@ -9,24 +8,12 @@ namespace bp = boost::python;
 #include <opencv2/imgproc/imgproc.hpp>
 #endif // USE_OPENCV
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-
-#include <cstring>
-#include <map>
-#include <string>
-#include <vector>
-
-#include "boost/algorithm/string.hpp"
-#include "caffe/caffe.hpp"
-
 using caffe::Blob;
 using caffe::Caffe;
 using caffe::Layer;
 using caffe::Net;
 using caffe::shared_ptr;
 using caffe::string;
-using caffe::Timer;
 using caffe::vector;
 using std::ostringstream;
 
@@ -50,6 +37,7 @@ int main(int argc, char **argv)
     // const vector<Blob<float> *> &result = caffe_net.Forward();
     caffe_net.Forward();
 }
+
 #else
 using namespace caffe; // NOLINT(build/namespaces)
 using std::string;
@@ -92,7 +80,7 @@ Classifier::Classifier(const string &model_file,
     num_channels_ = input_layer->shape(1);
     CHECK(num_channels_ == 3 || num_channels_ == 1)
         << "Input layer should have 1 or 3 channels.";
-    input_geometry_ = cv::Size(input_layer->width(), input_layer->height());
+    input_geometry_ = cv::Size(input_layer->shape(3), input_layer->shape(2));
 }
 
 /* Return the top N predictions. */
@@ -108,8 +96,7 @@ void Classifier::Classify(const cv::Mat &img)
 std::vector<float> Classifier::Predict(const cv::Mat &img)
 {
     Blob<float> *input_layer = net_->input_blobs()[0];
-    input_layer->Reshape(1, num_channels_,
-                         input_geometry_.height, input_geometry_.width);
+    input_layer->Reshape(vector<int>{1, num_channels_, input_geometry_.height, input_geometry_.width});
     /* Forward dimension change to all layers. */
     net_->Reshape();
 
@@ -139,7 +126,7 @@ void Classifier::WrapInputLayer(std::vector<cv::Mat> *input_channels)
     int width = input_layer->shape(3);
     int height = input_layer->shape(2);
     float *input_data = input_layer->mutable_cpu_data();
-    for (int i = 0; i < input_layer->channels(); ++i)
+    for (int i = 0; i < input_layer->shape(1); ++i)
     {
         cv::Mat channel(height, width, CV_32FC1, input_data);
         input_channels->push_back(channel);
@@ -187,6 +174,7 @@ int main()
     cv::Mat img = cv::imread("/mycaffe/model/20200804-09-12-40-120_0.jpg", -1);
     CHECK(!img.empty()) << "Unable to decode image ";
     classifier.Classify(img);
+    cout << "true = [0.00210892 1.09131e-07]" << endl;
 }
 
 #endif

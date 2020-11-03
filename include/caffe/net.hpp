@@ -1,280 +1,127 @@
 #ifndef CAFFE_NET_HPP_
 #define CAFFE_NET_HPP_
 
-#include <map>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 
-#include <algorithm>
-#include <map>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "caffe/proto/caffe.pb.h"
 #include "caffe/util/insert_splits.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
 namespace caffe
 {
+    template <typename Dtype>
+    class Net
+    {
+    public:
+        Net(const string &param_file, Phase phase, const int level = 0, const vector<string> *stages = nullptr);
+        Net(const Net &) = delete;
+        Net &operator=(const Net &) = delete;
+        virtual ~Net() {}
 
-  /**
- * @brief Connects Layer%s together into a directed acyclic graph (DAG)
- *        specified by a NetParameter.
- *
- * TODO(dox): more thorough description.
- */
-  template <typename Dtype>
-  class Net
-  {
-  public:
-    explicit Net(const NetParameter &param);
-    Net(const string &param_file, Phase phase, const int level = 0, const vector<string> *stages = NULL);
-    virtual ~Net() {}
+        /// @brief Initialize a network with a NetParameter.
+        void Init(const NetParameter &param);
 
-    /// @brief Initialize a network with a NetParameter.
-    void Init(const NetParameter &param);
+        ///@brief Run Forward and return the result.注意,这里与原本有区别,取消了参数的传入
+        const vector<Blob<Dtype> *> &Forward();
 
-    ///@brief Run Forward and return the result.
-    const vector<Blob<Dtype> *> &Forward(Dtype *loss = NULL);
+        /**
+         * @brief Reshape all layers from bottom to top.
+         *
+         * This is useful to propagate changes to layer sizes without running
+         * a forward pass, e.g. to compute output feature size.
+         */
+        void Reshape();
 
-    /**
-   * The network backward should take no input and output, since it solely
-   * computes the gradient w.r.t the parameters, and the data has already been
-   * provided during the forward pass.
-   */
-    //TODO 直接返回空
-    void Backward(){};
-    void BackwardFromTo(int start, int end){};
-    void BackwardFrom(int start){};
-    void BackwardTo(int end){};
+        /**
+         * @brief For an already initialized net, copies the pre-trained layers from
+         *        another Net.
+         *        对于一个已经初始化的网络,从其它net中复制好已经训练好的层
+         */
+        void CopyTrainedLayersFrom(const NetParameter &param);
+        void CopyTrainedLayersFrom(const string &trained_filename);
+        void CopyTrainedLayersFromBinaryProto(const string &trained_filename);
 
-    /**
-   * @brief Reshape all layers from bottom to top.
-   *
-   * This is useful to propagate changes to layer sizes without running
-   * a forward pass, e.g. to compute output feature size.
-   */
-    void Reshape();
+        /// @brief returns the layer names 返回层名字
+        inline const vector<string> &layer_names() const { return layer_names_; }
+        /// @brief returns the blob names  返回blob名字
+        inline const vector<string> &blob_names() const { return blob_names_; }
+        /// @brief returns the blobs  返回blob的值
+        inline const vector<shared_ptr<Blob<Dtype>>> &blobs() const
+        {
+            return blobs_;
+        }
+        /// @brief returns the layers  返回layer,可以查看每层的权重
+        inline const vector<shared_ptr<Layer<Dtype>>> &layers() const
+        {
+            return layers_;
+        }
 
-    /**
-   * @brief For an already initialized net, implicitly copies (i.e., using no
-   *        additional memory) the pre-trained layers from another Net.
-   */
-    void ShareTrainedLayersWith(const Net *other);
-    // For an already initialized net, CopyTrainedLayersFrom() copies the already
-    // trained layers from another net parameter instance.
-    /**
-   * @brief For an already initialized net, copies the pre-trained layers from
-   *        another Net.
-   */
-    void CopyTrainedLayersFrom(const NetParameter &param);
-    void CopyTrainedLayersFrom(const string &trained_filename);
-    void CopyTrainedLayersFromBinaryProto(const string &trained_filename);
-    /// @brief Writes the net to a proto.
-    void ToProto(NetParameter *param, bool write_diff = false) const;
+        /// @brief Input and output blob numbers
+        inline int num_inputs() const { return net_input_blobs_.size(); }
+        inline int num_outputs() const { return net_output_blobs_.size(); }
+        /// 输入的blob
+        inline const vector<Blob<Dtype> *> &input_blobs() const
+        {
+            return net_input_blobs_;
+        }
+        /// 输出的blob
+        inline const vector<Blob<Dtype> *> &output_blobs() const
+        {
+            return net_output_blobs_;
+        }
 
-    /// @brief returns the network name.
-    inline const string &name() const { return name_; }
-    /// @brief returns the layer names
-    inline const vector<string> &layer_names() const { return layer_names_; }
-    /// @brief returns the blob names
-    inline const vector<string> &blob_names() const { return blob_names_; }
-    /// @brief returns the blobs
-    inline const vector<shared_ptr<Blob<Dtype>>> &blobs() const
-    {
-      return blobs_;
-    }
-    /// @brief returns the layers
-    inline const vector<shared_ptr<Layer<Dtype>>> &layers() const
-    {
-      return layers_;
-    }
-    /// @brief returns the phase: TRAIN or TEST
-    inline Phase phase() const { return phase_; }
-    /**
-   * @brief returns the bottom vecs for each layer -- usually you won't
-   *        need this unless you do per-layer checks such as gradients.
-   */
-    inline const vector<vector<Blob<Dtype> *>> &bottom_vecs() const
-    {
-      return bottom_vecs_;
-    }
-    /**
-   * @brief returns the top vecs for each layer -- usually you won't
-   *        need this unless you do per-layer checks such as gradients.
-   */
-    inline const vector<vector<Blob<Dtype> *>> &top_vecs() const
-    {
-      return top_vecs_;
-    }
-    /// @brief returns the ids of the top blobs of layer i
-    inline const vector<int> &top_ids(int i) const
-    {
-      CHECK_GE(i, 0) << "Invalid layer id";
-      CHECK_LT(i, top_id_vecs_.size()) << "Invalid layer id";
-      return top_id_vecs_[i];
-    }
-    /// @brief returns the ids of the bottom blobs of layer i
-    inline const vector<int> &bottom_ids(int i) const
-    {
-      CHECK_GE(i, 0) << "Invalid layer id";
-      CHECK_LT(i, bottom_id_vecs_.size()) << "Invalid layer id";
-      return bottom_id_vecs_[i];
-    }
-    /// @brief returns the parameters
-    inline const vector<shared_ptr<Blob<Dtype>>> &params() const
-    {
-      return params_;
-    }
-    const map<string, int> &param_names_index() const
-    {
-      return param_names_index_;
-    }
-    inline const vector<int> &param_owners() const { return param_owners_; }
-    inline const vector<string> &param_display_names() const
-    {
-      return param_display_names_;
-    }
-    /// @brief Input and output blob numbers
-    inline int num_inputs() const { return net_input_blobs_.size(); }
-    inline int num_outputs() const { return net_output_blobs_.size(); }
-    inline const vector<Blob<Dtype> *> &input_blobs() const
-    {
-      return net_input_blobs_;
-    }
-    inline const vector<Blob<Dtype> *> &output_blobs() const
-    {
-      return net_output_blobs_;
-    }
-    inline const vector<int> &input_blob_indices() const
-    {
-      return net_input_blob_indices_;
-    }
-    inline const vector<int> &output_blob_indices() const
-    {
-      return net_output_blob_indices_;
-    }
-    bool has_blob(const string &blob_name) const;
-    const shared_ptr<Blob<Dtype>> blob_by_name(const string &blob_name) const;
-    bool has_layer(const string &layer_name) const;
-    const shared_ptr<Layer<Dtype>> layer_by_name(const string &layer_name) const;
+        // Helpers for Init.
+        /**
+         * @brief Remove layers that the user specified should be excluded given the current
+         *        phase, level, and stage.
+         *          根据规则,移除相应层
+         */
+        static void FilterNet(const NetParameter &param,
+                              NetParameter *param_filtered);
+        /// @brief return whether NetState state meets NetStateRule rule
+        static bool StateMeetsRule(const NetState &state, const NetStateRule &rule,
+                                   const string &layer_name);
 
-    void set_debug_info(const bool value) { debug_info_ = value; }
-
-    // Helpers for Init.
-    /**
-   * @brief Remove layers that the user specified should be excluded given the current
-   *        phase, level, and stage.
-   */
-    static void FilterNet(const NetParameter &param,
-                          NetParameter *param_filtered);
-    /// @brief return whether NetState state meets NetStateRule rule
-    static bool StateMeetsRule(const NetState &state, const NetStateRule &rule,
-                               const string &layer_name);
-
-    // Invoked at specific points during an iteration
-    class Callback
-    {
     protected:
-      virtual void run(int layer) = 0;
+        // Helpers for Init.
+        /// @brief Append a new top blob to the net.
+        void AppendTop(const NetParameter &param, const int layer_id,
+                       const int top_id, set<string> *available_blobs,
+                       map<string, int> *blob_name_to_idx);
+        /// @brief Append a new bottom blob to the net.
+        int AppendBottom(const NetParameter &param, const int layer_id,
+                         const int bottom_id, set<string> *available_blobs,
+                         map<string, int> *blob_name_to_idx);
 
-      template <typename T>
-      friend class Net;
-    };
-    const vector<Callback *> &before_forward() const { return before_forward_; }
-    void add_before_forward(Callback *value)
-    {
-      before_forward_.push_back(value);
-    }
-    const vector<Callback *> &after_forward() const { return after_forward_; }
-    void add_after_forward(Callback *value)
-    {
-      after_forward_.push_back(value);
-    }
-    const vector<Callback *> &before_backward() const { return before_backward_; }
-    void add_before_backward(Callback *value)
-    {
-      before_backward_.push_back(value);
-    }
-    const vector<Callback *> &after_backward() const { return after_backward_; }
-    void add_after_backward(Callback *value)
-    {
-      after_backward_.push_back(value);
-    }
+        /// @brief The network name
+        string name_;
+        /// @brief The phase: TRAIN or TEST
+        Phase phase_;
+        /// @brief Individual layers in the net
+        vector<shared_ptr<Layer<Dtype>>> layers_; //保存每一层
+        vector<string> layer_names_;              //每个layer的名字
+        /// @brief the blobs storing intermediate results between the layer.
+        vector<shared_ptr<Blob<Dtype>>> blobs_; //存储层与层之间的中间结果
+        vector<string> blob_names_;             //每个blob的名字
+        /// bottom_vecs stores the vectors containing the input for each layer.
+        /// They don't actually host the blobs (blobs_ does), so we simply store
+        /// pointers.
+        vector<vector<Blob<Dtype> *>> bottom_vecs_;
+        vector<vector<int>> bottom_id_vecs_;
+        /// top_vecs stores the vectors containing the output for each layer
+        vector<vector<Blob<Dtype> *>> top_vecs_;
+        vector<vector<int>> top_id_vecs_;
+        /// blob indices for the input and the output of the net
+        vector<int> net_input_blob_indices_;
+        vector<int> net_output_blob_indices_; //网络输出层index
+        vector<Blob<Dtype> *> net_input_blobs_;
+        vector<Blob<Dtype> *> net_output_blobs_; //网络输出层
 
-  protected:
-    // Helpers for Init.
-    /// @brief Append a new top blob to the net.
-    void AppendTop(const NetParameter &param, const int layer_id,
-                   const int top_id, set<string> *available_blobs,
-                   map<string, int> *blob_name_to_idx);
-    /// @brief Append a new bottom blob to the net.
-    int AppendBottom(const NetParameter &param, const int layer_id,
-                     const int bottom_id, set<string> *available_blobs,
-                     map<string, int> *blob_name_to_idx);
-    /// @brief Append a new parameter blob to the net.
-    void AppendParam(const NetParameter &param, const int layer_id,
-                     const int param_id);
+    }; //class Net
 
-    /// @brief Helper for displaying debug info in Forward.
-    void ForwardDebugInfo(const int layer_id);
-    /// @brief Helper for displaying debug info in Update.
-    void UpdateDebugInfo(const int param_id);
+} //namespace caffe
 
-    /// @brief The network name
-    string name_;
-    /// @brief The phase: TRAIN or TEST
-    Phase phase_;
-    /// @brief Individual layers in the net
-    vector<shared_ptr<Layer<Dtype>>> layers_; //保存每一层
-    vector<string> layer_names_;              //每个layer的名字
-    /// @brief the blobs storing intermediate results between the layer.
-    vector<shared_ptr<Blob<Dtype>>> blobs_; //存储层与层之间的中间结果
-    vector<string> blob_names_;             //每个blob的名字
-    /// bottom_vecs stores the vectors containing the input for each layer.
-    /// They don't actually host the blobs (blobs_ does), so we simply store
-    /// pointers.
-    vector<vector<Blob<Dtype> *>> bottom_vecs_;
-    vector<vector<int>> bottom_id_vecs_;
-    /// top_vecs stores the vectors containing the output for each layer
-    vector<vector<Blob<Dtype> *>> top_vecs_;
-    vector<vector<int>> top_id_vecs_;
-    /// Vector of weight in the loss (or objective) function of each net blob,
-    /// indexed by blob_id.
-    vector<vector<int>> param_id_vecs_;
-    vector<int> param_owners_;
-    vector<string> param_display_names_;
-    vector<pair<int, int>> param_layer_indices_;
-    map<string, int> param_names_index_;
-    /// blob indices for the input and the output of the net
-    vector<int> net_input_blob_indices_;
-    vector<int> net_output_blob_indices_; //网络输出层index
-    vector<Blob<Dtype> *> net_input_blobs_;
-    vector<Blob<Dtype> *> net_output_blobs_; //网络输出层
-    /// The parameters in the network.
-    vector<shared_ptr<Blob<Dtype>>> params_;
-
-    /// Whether to compute and display debug info for the net.
-    bool debug_info_;
-    // Callbacks
-    vector<Callback *> before_forward_;
-    vector<Callback *> after_forward_;
-    vector<Callback *> before_backward_;
-    vector<Callback *> after_backward_;
-
-    DISABLE_COPY_AND_ASSIGN(Net);
-  };
-
-} // namespace caffe
-
-#endif // CAFFE_NET_HPP_
+#endif //CAFFE_NET_HPP_

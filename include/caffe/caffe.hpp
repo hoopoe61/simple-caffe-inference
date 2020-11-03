@@ -6,13 +6,12 @@
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
-#include "caffe/filler.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/layer_factory.hpp"
 #include "caffe/net.hpp"
 #include "caffe/proto/caffe.pb.h"
-#include "caffe/util/benchmark.hpp"
 #include "caffe/util/io.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
-#endif  // CAFFE_CAFFE_HPP_
+
+#endif //CAFFE_CAFFE_HPP_
