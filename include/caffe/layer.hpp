@@ -196,6 +196,7 @@ namespace caffe
         //层状态 test
         Phase phase_;
         /** The vector that stores the learnable parameters as a set of blobs. */
+        //TODO 这里没有用到这个参数,这个参数的作用是?
         vector<shared_ptr<Blob<Dtype>>> blobs_; //存储可学习的参数
 
         /** @brief Using the CPU device, compute the layer output. */
@@ -213,18 +214,6 @@ namespace caffe
             // LOG(WARNING) << "Using CPU code as backup.";
             return Forward_cpu(bottom, top);
         }
-
-        // //保留后传接口
-        // virtual void Backward_cpu(const vector<Blob<Dtype> *> &top,
-        //                           const vector<bool> &propagate_down,
-        //                           const vector<Blob<Dtype> *> &bottom) = 0;
-        // virtual void Backward_gpu(const vector<Blob<Dtype> *> &top,
-        //                           const vector<bool> &propagate_down,
-        //                           const vector<Blob<Dtype> *> &bottom)
-        // {
-        //     // LOG(WARNING) << "Using CPU code as backup.";
-        //     Backward_cpu(top, propagate_down, bottom);
-        // }
 
         /**
          * Called by the parent Layer's SetUp to check that the number of bottom
@@ -285,6 +274,7 @@ namespace caffe
     // Forward wrappers. You should implement the cpu and
     // gpu specific implementations instead, and should not change these
     // functions.
+    // 注意,这里的const表示不能修改vector里面的值.但vector里面是存在指针,可以改变指针指向的值
     template <typename Dtype>
     inline Dtype Layer<Dtype>::Forward(const vector<Blob<Dtype> *> &bottom,
                                        const vector<Blob<Dtype> *> &top)

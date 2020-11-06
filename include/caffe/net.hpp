@@ -104,7 +104,7 @@ namespace caffe
         vector<shared_ptr<Layer<Dtype>>> layers_; //保存每一层
         vector<string> layer_names_;              //每个layer的名字
         /// @brief the blobs storing intermediate results between the layer.
-        vector<shared_ptr<Blob<Dtype>>> blobs_; //存储层与层之间的中间结果
+        vector<shared_ptr<Blob<Dtype>>> blobs_; //每层的计算结果
         vector<string> blob_names_;             //每个blob的名字
         /// bottom_vecs stores the vectors containing the input for each layer.
         /// They don't actually host the blobs (blobs_ does), so we simply store

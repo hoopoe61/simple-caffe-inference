@@ -48,6 +48,7 @@ namespace caffe
         virtual void compute_output_shape() = 0;
 
         /// @brief The spatial dimensions of a filter kernel.
+        /// 卷积核尺寸[k_h,k_w]
         Blob<int> kernel_shape_;
         /// @brief The spatial dimensions of the stride.
         Blob<int> stride_;
@@ -56,6 +57,7 @@ namespace caffe
         /// @brief The spatial dimensions of the dilation.
         Blob<int> dilation_;
         /// @brief The spatial dimensions of the convolution input.
+        /// 输入特征图的空间尺寸 [c_in,f_h,f_w]
         Blob<int> conv_input_shape_;
         /// @brief The spatial dimensions of the col_buffer.
         vector<int> col_buffer_shape_;
@@ -64,11 +66,11 @@ namespace caffe
         const vector<int> *bottom_shape_;
 
         int num_spatial_axes_;
-        int bottom_dim_;
-        int top_dim_;
+        int bottom_dim_; // 表明每个batch的偏移量,总共有num_个batch
+        int top_dim_;    // 表明每个batch的偏移量,总共有num_个batch
 
         int channel_axis_; //channel的axis
-        int num_;
+        int num_;          //bottom[0]->count(0, channel_axis_)  ----->  batch size
         int channels_;
         int group_;
         int out_spatial_dim_;
@@ -84,6 +86,7 @@ namespace caffe
         {
             if (!force_nd_im2col_ && num_spatial_axes_ == 2)
             {
+                // 对数据转换成im2col
                 im2col_cpu(data, conv_in_channels_,
                            conv_input_shape_.cpu_data()[1], conv_input_shape_.cpu_data()[2],
                            kernel_shape_.cpu_data()[0], kernel_shape_.cpu_data()[1],
@@ -107,7 +110,7 @@ namespace caffe
         int col_offset_;
         int output_offset_;
 
-        Blob<Dtype> col_buffer_;
+        Blob<Dtype> col_buffer_; //im2col的分配空间
         Blob<Dtype> bias_multiplier_;
     };
 

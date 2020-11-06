@@ -88,7 +88,8 @@ namespace caffe
         // freed in a non-pinned way, which may cause problems - I haven't verified
         // it personally but better to note it here in the header file.
         inline static void set_mode(Brew mode) { Get().mode_ = mode; }
-        inline static bool root_solver() { return Get().solver_rank_ == 0; } //用于控制是否输出LOG信息
+        inline static void set_solver_rank(int val) { Get().solver_rank_ = val; } //用于控制是否输出LOG信息
+        inline static bool root_solver() { return Get().solver_rank_ == 0; }      //用于控制是否输出LOG信息
 
     protected:
         Brew mode_;

@@ -8,7 +8,7 @@ namespace caffe
     {
         // Configure the kernel size, padding, stride, and inputs.
         ConvolutionParameter conv_param = this->layer_param_.convolution_param();
-        force_nd_im2col_ = conv_param.force_nd_im2col();
+        force_nd_im2col_ = conv_param.force_nd_im2col();                  //默认是false
         channel_axis_ = bottom[0]->CanonicalAxisIndex(conv_param.axis()); //channel_axis_ =1
         const int first_spatial_axis = channel_axis_ + 1;                 //first_spatial_axis=2
         const int num_axes = bottom[0]->num_axes();                       //num_axes=4
@@ -21,7 +21,7 @@ namespace caffe
         int *kernel_shape_data = kernel_shape_.mutable_cpu_data();
         if (conv_param.has_kernel_h() || conv_param.has_kernel_w())
         {
-            //不存在kernel_size这个参数
+            //不存在kernel_size这个参数时的操作
             CHECK_EQ(num_spatial_axes_, 2)
                 << "kernel_h & kernel_w can only be used for 2D convolution.";
             CHECK_EQ(0, conv_param.kernel_size_size())
@@ -38,8 +38,7 @@ namespace caffe
                 << num_spatial_axes_ << " spatial dims).";
             for (int i = 0; i < num_spatial_axes_; ++i)
             {
-                kernel_shape_data[i] =
-                    conv_param.kernel_size((num_kernel_dims == 1) ? 0 : i);
+                kernel_shape_data[i] = conv_param.kernel_size((num_kernel_dims == 1) ? 0 : i);
                 CHECK_GT(kernel_shape_data[i], 0) << "Filter dimensions must be nonzero.";
             }
         }
@@ -123,13 +122,12 @@ namespace caffe
             }
         }
         // Configure output channels and groups.
-        channels_ = bottom[0]->shape(channel_axis_);
-        num_output_ = this->layer_param_.convolution_param().num_output();
+        channels_ = bottom[0]->shape(channel_axis_);                       //input_channel
+        num_output_ = this->layer_param_.convolution_param().num_output(); //output_channel
         CHECK_GT(num_output_, 0);
         group_ = this->layer_param_.convolution_param().group();
         CHECK_EQ(channels_ % group_, 0);
-        CHECK_EQ(num_output_ % group_, 0)
-            << "Number of output should be multiples of group.";
+        CHECK_EQ(num_output_ % group_, 0) << "Number of output should be multiples of group.";
         if (reverse_dimensions())
         {
             conv_out_channels_ = channels_;
@@ -180,7 +178,7 @@ namespace caffe
             }
             else
             {
-                this->blobs_.resize(1);
+                this->blobs_.resize(1); //这个blobs_来源于layer.hpp中
             }
             // Initialize the weights:
             // output channels x input channels per-group x kernel height x kernel width
@@ -191,8 +189,8 @@ namespace caffe
                 this->blobs_[1].reset(new Blob<Dtype>(bias_shape));
             }
         }
-        kernel_dim_ = this->blobs_[0]->count(1); // input_channel*kernel_height*kernel_width
-        weight_offset_ = conv_out_channels_ * kernel_dim_ / group_;
+        kernel_dim_ = this->blobs_[0]->count(1);                    // input_channel*kernel_height*kernel_width
+        weight_offset_ = conv_out_channels_ * kernel_dim_ / group_; //权重偏移量 c_out*c_in*k_h*k_w
     }
 
     template <typename Dtype>
@@ -208,15 +206,15 @@ namespace caffe
         // TODO: generalize to handle inputs of different shapes.
         for (int bottom_id = 1; bottom_id < bottom.size(); ++bottom_id)
         {
-            // 存在多个bottom
+            // 存在多个bottom的情况
             CHECK(bottom[0]->shape() == bottom[bottom_id]->shape())
                 << "shape mismatch - bottom[0]: " << bottom[0]->shape_string()
                 << " vs. bottom[" << bottom_id << "]: "
                 << bottom[bottom_id]->shape_string();
         }
         // Shape the tops.
-        bottom_shape_ = &bottom[0]->shape();
-        compute_output_shape(); //计算算计后特征图的尺寸，会改变output_shape_的值
+        bottom_shape_ = &bottom[0]->shape(); // N * channels * height * width
+        compute_output_shape();              //计算算计后特征图的尺寸，会改变output_shape_的值
         vector<int> top_shape(bottom[0]->shape().begin(),
                               bottom[0]->shape().begin() + channel_axis_);
         top_shape.push_back(num_output_);
@@ -236,8 +234,8 @@ namespace caffe
         {
             conv_out_spatial_dim_ = top[0]->count(first_spatial_axis); // feature_height * feature_width
         }
-        col_offset_ = kernel_dim_ * conv_out_spatial_dim_; //TODO 代表什么含义
-        output_offset_ = conv_out_channels_ * conv_out_spatial_dim_ / group_;
+        col_offset_ = kernel_dim_ * conv_out_spatial_dim_;                    //TODO c_in*k_h*k_w*f_h*f_w 行偏移量?
+        output_offset_ = conv_out_channels_ * conv_out_spatial_dim_ / group_; //输出偏移量 c_out*f_h/f_w
         // Setup input dimensions (conv_input_shape_).
         vector<int> bottom_dim_blob_shape(1, num_spatial_axes_ + 1); //[3]
         conv_input_shape_.Reshape(bottom_dim_blob_shape);
@@ -269,11 +267,16 @@ namespace caffe
                 col_buffer_shape_.push_back(output_shape_[i]);
             }
         }
+        // 将bottom blob转化为im2col,其对应的shape为[c_in*k_h*k_w,f_h,f_w]
+        // 其中f_h,f_w表示输入的特征图的高宽,第一项表示卷积核的数据,同时也是一次卷积操作的数量
         col_buffer_.Reshape(col_buffer_shape_);
-        bottom_dim_ = bottom[0]->count(channel_axis_);
-        top_dim_ = top[0]->count(channel_axis_);
-        num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_;
+        bottom_dim_ = bottom[0]->count(channel_axis_);                   // 表明每个batch的偏移量,总共有num_个batch
+        top_dim_ = top[0]->count(channel_axis_);                         // 表明每个batch的偏移量,总共有num_个batch
+        num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_; //卷积核的数目
         // Set up the all ones "bias multiplier" for adding biases by BLAS
+        // 将"bias multiplier"全部设置为1,为了后面计算bias方便
+        // bias的数目是top blob的空间shape
+        // TODO 如果不使用bias,是否在这里可省下空间
         out_spatial_dim_ = top[0]->count(first_spatial_axis);
         if (bias_term_)
         {
@@ -291,6 +294,7 @@ namespace caffe
         const Dtype *col_buff = input;
         if (!is_1x1_)
         {
+            // 如果不是1*1的操作
             if (!skip_im2col)
             {
                 conv_im2col_cpu(input, col_buffer_.mutable_cpu_data());

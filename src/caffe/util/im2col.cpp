@@ -22,14 +22,9 @@ namespace caffe
                     const int dilation_h, const int dilation_w,
                     Dtype *data_col)
     {
-        const int output_h = (height + 2 * pad_h -
-                              (dilation_h * (kernel_h - 1) + 1)) /
-                                 stride_h +
-                             1;
-        const int output_w = (width + 2 * pad_w -
-                              (dilation_w * (kernel_w - 1) + 1)) /
-                                 stride_w +
-                             1;
+        // 计算特征图输出尺寸
+        const int output_h = (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
+        const int output_w = (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
         const int channel_size = height * width;
         for (int channel = channels; channel--; data_im += channel_size)
         {

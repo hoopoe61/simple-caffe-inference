@@ -9,6 +9,7 @@ namespace caffe
                        const int *kernel_shape, const int *pad, const int *stride,
                        const int *dilation, Dtype *data_col);
 
+    // 将data_im的数据进行im2col转换,放在data_col中
     template <typename Dtype>
     void im2col_cpu(const Dtype *data_im, const int channels,
                     const int height, const int width, const int kernel_h, const int kernel_w,

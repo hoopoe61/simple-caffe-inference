@@ -95,9 +95,7 @@ namespace caffe
         //使用LayerParameter来初始化层
         static shared_ptr<Layer<Dtype>> CreateLayer(const LayerParameter &param)
         {
-            // if (Caffe::root_solver()) {
-            //   LOG(INFO) << "Creating layer " << param.name();
-            // }
+            LOG_IF(INFO, Caffe::root_solver()) << "Creating layer " << param.name();
             const string &type = param.type();
             CreatorRegistry &registry = Registry();
             //判断已经注册过

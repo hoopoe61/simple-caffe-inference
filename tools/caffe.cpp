@@ -26,6 +26,7 @@ int main(int argc, char **argv)
     //设置工作模式:CPU or GPU
     std::cout << "Use CPU" << std::endl;
     Caffe::set_mode(Caffe::CPU);
+    Caffe::set_solver_rank(1); //不进行日志输出
 
     Net<float> caffe_net(model, caffe::TEST, 0, nullptr);
     caffe_net.CopyTrainedLayersFrom(weights);

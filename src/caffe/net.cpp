@@ -33,9 +33,9 @@ namespace caffe
         // 2.根据每层的include/exclude规则和当前模型的phase,来构建网络
         NetParameter filtered_param;
         FilterNet(in_param, &filtered_param);
-        // LOG_IF(INFO, Caffe::root_solver())
-        //     << "Initializing net from parameters: " << std::endl
-        //     << filtered_param.DebugString(); //输出网络prototxt的内容
+        LOG_IF(INFO, Caffe::root_solver())
+            << "Initializing net from parameters: " << std::endl
+            << filtered_param.DebugString(); //输出网络prototxt的内容
 
         // 3.增加splits层
         NetParameter param;
@@ -57,10 +57,10 @@ namespace caffe
 
             // 创建层
             const LayerParameter &layer_param = param.layer(layer_id);
-            layers_.push_back(LayerRegistry<Dtype>::CreateLayer(layer_param)); //调用工厂模式来创建
+            layers_.push_back(LayerRegistry<Dtype>::CreateLayer(layer_param)); //调用工厂模式来创建,本质上是调用特定层的构造函数
             layer_names_.push_back(layer_param.name());
-            // LOG_IF(INFO, Caffe::root_solver())
-            //     << "Creating Layer " << layer_param.name();
+            LOG_IF(INFO, Caffe::root_solver())
+                << "Creating Layer " << layer_param.name();
 
             // 连接该层的输入输出,即将bottom与top关联起来
             // input层的bottom.size()=0,所以会从appendTop开始
@@ -74,6 +74,7 @@ namespace caffe
             int num_top = layer_param.top_size();
             for (int top_id = 0; top_id < num_top; ++top_id)
             {
+                // 为每层的top创建blob
                 AppendTop(param, layer_id, top_id, &available_blobs, &blob_name_to_idx);
                 // 收集输入层作为输入,此时输入层的类型必须为"Input"
                 if (layer_param.type() == "Input")
@@ -101,8 +102,8 @@ namespace caffe
             }
             // 当该层连接完成后,创建该层
             layers_[layer_id]->SetUp(bottom_vecs_[layer_id], top_vecs_[layer_id]); //调用layer.hpp中的SetUp()函数,这里传入了blob的指针
-            // LOG_IF(INFO, Caffe::root_solver())
-            //     << "Setting up " << layer_names_[layer_id];
+            LOG_IF(INFO, Caffe::root_solver())
+                << "Setting up " << layer_names_[layer_id];
         }
         // 将剩下的blobs认为是输出层
         // 在AppendBottom()中erase相应的blob_name,在AppendTop()中插入相应的blob_name
@@ -255,8 +256,8 @@ namespace caffe
             blob_name == layer_param->bottom(top_id))
         {
             // In-place computation
-            // LOG_IF(INFO, Caffe::root_solver())
-            //     << layer_param->name() << " -> " << blob_name << " (in-place)";
+            LOG_IF(INFO, Caffe::root_solver())
+                << layer_param->name() << " -> " << blob_name << " (in-place)";
             // 在一开始,已经为top_vecs_预分配了空间
             // get()是作用于智能指针上,返回其对应的指针
             // 因为是in-place操作,之前已经保存在具有相同名字的blob,所以这里直接取对指针即可,指向同一个内存位置
@@ -273,10 +274,7 @@ namespace caffe
         else
         {
             // Normal output.
-            // if (Caffe::root_solver())
-            // {
-            //   LOG(INFO) << layer_param->name() << " -> " << blob_name;
-            // }
+            LOG_IF(INFO, Caffe::root_solver()) << layer_param->name() << " -> " << blob_name;
             shared_ptr<Blob<Dtype>> blob_pointer(new Blob<Dtype>());
             const int blob_id = blobs_.size();
             blobs_.push_back(blob_pointer); //保存其智能指针
@@ -309,8 +307,8 @@ namespace caffe
                        << layer_param.name() << "', bottom index " << bottom_id << ")";
         }
         const int blob_id = (*blob_name_to_idx)[blob_name];
-        // LOG_IF(INFO, Caffe::root_solver())
-        //     << layer_names_[layer_id] << " <- " << blob_name;
+        LOG_IF(INFO, Caffe::root_solver())
+            << layer_names_[layer_id] << " <- " << blob_name;
         bottom_vecs_[layer_id].push_back(blobs_[blob_id].get()); //压入已经在AppendTop中初始化过的指针
         bottom_id_vecs_[layer_id].push_back(blob_id);
         available_blobs->erase(blob_name);
@@ -364,7 +362,7 @@ namespace caffe
             { //例如conv层的size=2,分别是权重与偏置(也可能size=1)
                 if (!target_blobs[j]->ShapeEquals(source_layer.blobs(j)))
                 {
-                    // 如果形状不一致,输出报错信息,做如下操作,是报错更加具体
+                    // 如果形状不一致,输出报错信息,做如下操作,使报错更加具体
                     Blob<Dtype> source_blob;
                     const bool kReshape = true;
                     source_blob.FromProto(source_layer.blobs(j), kReshape);
