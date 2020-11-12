@@ -15,6 +15,8 @@ using caffe::Net;
 using caffe::shared_ptr;
 using caffe::string;
 using caffe::vector;
+using std::cout;
+using std::endl;
 using std::ostringstream;
 
 #ifndef USE_OPENCV
@@ -32,10 +34,31 @@ int main(int argc, char **argv)
     caffe_net.CopyTrainedLayersFrom(weights);
     std::cout << "Finish loading" << std::endl;
 
-    std::cout << "input name : " << caffe_net.layer_names()[0] << std::endl;
-    std::cout << "blob name : " << caffe_net.blob_names()[0] << std::endl;
-    std::cout << caffe_net.num_outputs() << std::endl;
-    // const vector<Blob<float> *> &result = caffe_net.Forward();
+    Blob<float> *input_layer = caffe_net.input_blobs()[0];
+    input_layer->Reshape(vector<int>{1, 3, 224, 112});
+    caffe_net.Reshape();
+
+    float *input_data = input_layer->mutable_cpu_data();
+    for (int i = 0; i < 3 * 224 * 112; ++i)
+        input_data[i] = i * 1.0;
+
+    // const float *input_data_ = input_layer->cpu_data();
+    // for (int channel = 0; channel < 3; ++channel)
+    // {
+    //     for (int row = 0; row < 10; ++row)
+    //     {
+    //         for (int col = 0; col < 10; ++col)
+    //         {
+    //             cout << input_data_[channel * 224 * 112 + row * 112 + col] << " ";
+    //         }
+    //         cout << endl;
+    //     }
+    //     cout << "---------------" << endl;
+    // }
+    // for (int i = 0; i < 20; ++i)
+    //     cout << input_data_[i] << " ";
+    // cout << endl;
+
     caffe_net.Forward();
 }
 

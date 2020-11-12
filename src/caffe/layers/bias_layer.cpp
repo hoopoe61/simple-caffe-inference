@@ -18,8 +18,8 @@ namespace caffe
     {
       // bias is a learned parameter; initialize it
       const BiasParameter &param = this->layer_param_.bias_param();
-      const int axis = bottom[0]->CanonicalAxisIndex(param.axis());
-      const int num_axes = param.num_axes();
+      const int axis = bottom[0]->CanonicalAxisIndex(param.axis()); //默认是1
+      const int num_axes = param.num_axes();                        //默认是1
       CHECK_GE(num_axes, -1) << "num_axes must be non-negative, "
                              << "or -1 to extend to the end of bottom[0]";
       if (num_axes >= 0)
@@ -28,17 +28,14 @@ namespace caffe
             << "bias blob's shape extends past bottom[0]'s shape when applied "
             << "starting with bottom[0] axis = " << axis;
       }
-      this->blobs_.resize(1);
+      this->blobs_.resize(1); //可学习参数beta
       const vector<int>::const_iterator &shape_start =
           bottom[0]->shape().begin() + axis;
       const vector<int>::const_iterator &shape_end =
           (num_axes == -1) ? bottom[0]->shape().end() : (shape_start + num_axes);
       vector<int> bias_shape(shape_start, shape_end);
-      this->blobs_[0].reset(new Blob<Dtype>(bias_shape));
-      // shared_ptr<Filler<Dtype>> filler(GetFiller<Dtype>(param.filler()));
-      // filler->Fill(this->blobs_[0].get());
+      this->blobs_[0].reset(new Blob<Dtype>(bias_shape)); //通道数
     }
-    // this->param_propagate_down_.resize(this->blobs_.size(), true);
   }
 
   template <typename Dtype>
@@ -61,10 +58,10 @@ namespace caffe
           << "dimension mismatch between bottom[0]->shape(" << axis + i
           << ") and bias->shape(" << i << ")";
     }
-    outer_dim_ = bottom[0]->count(0, axis);
-    bias_dim_ = bias->count();
-    inner_dim_ = bottom[0]->count(axis + bias->num_axes());
-    dim_ = bias_dim_ * inner_dim_;
+    outer_dim_ = bottom[0]->count(0, axis);                 //batch size
+    bias_dim_ = bias->count();                              //channels
+    inner_dim_ = bottom[0]->count(axis + bias->num_axes()); //f_h*f_w
+    dim_ = bias_dim_ * inner_dim_;                          //每一个特征图的偏移量
     if (bottom[0] != top[0])
     {
       top[0]->ReshapeLike(*bottom[0]);

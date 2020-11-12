@@ -60,7 +60,7 @@ namespace caffe
         /// 输入特征图的空间尺寸 [c_in,f_h,f_w]
         Blob<int> conv_input_shape_;
         /// @brief The spatial dimensions of the col_buffer.
-        vector<int> col_buffer_shape_;
+        vector<int> col_buffer_shape_; //一个输出通道对应的所有卷积核的所有卷积区域转化成一列向量的形状
         /// @brief The spatial dimensions of the output.
         vector<int> output_shape_;
         const vector<int> *bottom_shape_;

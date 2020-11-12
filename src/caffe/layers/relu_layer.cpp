@@ -13,10 +13,10 @@ namespace caffe
         const Dtype *bottom_data = bottom[0]->cpu_data();
         Dtype *top_data = top[0]->mutable_cpu_data();
         const int count = bottom[0]->count();
-        Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
+        Dtype negative_slope = this->layer_param_.relu_param().negative_slope(); //默认是0
         for (int i = 0; i < count; ++i)
         {
-            top_data[i] = std::max(bottom_data[i], Dtype(0)) + negative_slope * std::min(bottom_data[i], Dtype(0));
+            top_data[i] = std::max(bottom_data[i], Dtype(0)) + negative_slope * std::min(bottom_data[i], Dtype(0)); //可以转换为pRelu
         }
     }
 

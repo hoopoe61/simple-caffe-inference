@@ -15,10 +15,11 @@ namespace caffe
         transpose_ = this->layer_param_.inner_product_param().transpose();
         N_ = num_output;
         const int axis = bottom[0]->CanonicalAxisIndex(
-            this->layer_param_.inner_product_param().axis());
+            this->layer_param_.inner_product_param().axis()); //默认为1
         // Dimensions starting from "axis" are "flattened" into a single
         // length K_ vector. For example, if bottom[0]'s shape is (N, C, H, W),
         // and axis == 1, N inner products with dimension CHW are performed.
+        // 压缩成长度为K_的一维向量
         K_ = bottom[0]->count(axis);
         // Check if we need to set up the weights
         if (this->blobs_.size() > 0)
@@ -47,22 +48,14 @@ namespace caffe
                 weight_shape[0] = N_;
                 weight_shape[1] = K_;
             }
-            this->blobs_[0].reset(new Blob<Dtype>(weight_shape));
-            // // fill the weights
-            // shared_ptr<Filler<Dtype>> weight_filler(GetFiller<Dtype>(
-            //     this->layer_param_.inner_product_param().weight_filler()));
-            // weight_filler->Fill(this->blobs_[0].get());
+            this->blobs_[0].reset(new Blob<Dtype>(weight_shape)); //shape:[number_output,C*H*W]
             // If necessary, initialize and fill the bias term
             if (bias_term_)
             {
                 vector<int> bias_shape(1, N_);
                 this->blobs_[1].reset(new Blob<Dtype>(bias_shape));
-                // shared_ptr<Filler<Dtype>> bias_filler(GetFiller<Dtype>(
-                //     this->layer_param_.inner_product_param().bias_filler()));
-                // bias_filler->Fill(this->blobs_[1].get());
             }
         } // parameter initialization
-        // this->param_propagate_down_.resize(this->blobs_.size(), true);
     }
 
     template <typename Dtype>
@@ -73,8 +66,7 @@ namespace caffe
         const int axis = bottom[0]->CanonicalAxisIndex(
             this->layer_param_.inner_product_param().axis());
         const int new_K = bottom[0]->count(axis);
-        CHECK_EQ(K_, new_K)
-            << "Input size incompatible with inner product parameters.";
+        CHECK_EQ(K_, new_K) << "Input size incompatible with inner product parameters.";
         // The first "axis" dimensions are independent inner products; the total
         // number of these is M_, the product over these dimensions.
         M_ = bottom[0]->count(0, axis);
@@ -83,7 +75,7 @@ namespace caffe
         vector<int> top_shape = bottom[0]->shape();
         top_shape.resize(axis + 1);
         top_shape[axis] = N_;
-        top[0]->Reshape(top_shape);
+        top[0]->Reshape(top_shape); //shape:[batch_size,number_output]
         // Set up the bias multiplier
         if (bias_term_)
         {

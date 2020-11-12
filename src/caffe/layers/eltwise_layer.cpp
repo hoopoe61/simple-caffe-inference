@@ -38,9 +38,7 @@ namespace caffe
         }
         top[0]->ReshapeLike(*bottom[0]);
         // If max operation, we will initialize the vector index part.
-        if (this->layer_param_.eltwise_param().operation() ==
-                EltwiseParameter_EltwiseOp_MAX &&
-            top.size() == 1)
+        if (this->layer_param_.eltwise_param().operation() == EltwiseParameter_EltwiseOp_MAX && top.size() == 1)
         {
             max_idx_.Reshape(bottom[0]->shape());
         }

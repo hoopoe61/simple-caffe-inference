@@ -60,6 +60,7 @@ namespace caffe
         CHECK_EQ(bottom_count_sum, top[0]->count());
         if (bottom.size() == 1)
         {
+            // 如果bottom只有1个,则top与bottom共享数据
             top[0]->ShareData(*bottom[0]);
         }
     }

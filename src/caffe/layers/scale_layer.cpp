@@ -20,8 +20,8 @@ namespace caffe
         else if (bottom.size() == 1)
         {
             // scale is a learned parameter; initialize it
-            axis_ = bottom[0]->CanonicalAxisIndex(param.axis());
-            const int num_axes = param.num_axes();
+            axis_ = bottom[0]->CanonicalAxisIndex(param.axis()); //默认是1
+            const int num_axes = param.num_axes();               //默认是1
             CHECK_GE(num_axes, -1) << "num_axes must be non-negative, "
                                    << "or -1 to extend to the end of bottom[0]";
             if (num_axes >= 0)
@@ -30,22 +30,13 @@ namespace caffe
                     << "scale blob's shape extends past bottom[0]'s shape when applied "
                     << "starting with bottom[0] axis = " << axis_;
             }
-            this->blobs_.resize(1);
+            this->blobs_.resize(1); //可学习参数alpha
             const vector<int>::const_iterator &shape_start =
                 bottom[0]->shape().begin() + axis_;
             const vector<int>::const_iterator &shape_end =
                 (num_axes == -1) ? bottom[0]->shape().end() : (shape_start + num_axes);
             vector<int> scale_shape(shape_start, shape_end);
-            this->blobs_[0].reset(new Blob<Dtype>(scale_shape));
-            // FillerParameter filler_param(param.filler());
-            // if (!param.has_filler())
-            // {
-            //     // Default to unit (1) filler for identity operation.
-            //     filler_param.set_type("constant");
-            //     filler_param.set_value(1);
-            // }
-            // shared_ptr<Filler<Dtype>> filler(GetFiller<Dtype>(filler_param));
-            // filler->Fill(this->blobs_[0].get());
+            this->blobs_[0].reset(new Blob<Dtype>(scale_shape)); //在BN层后,等同于通道数
         }
         if (param.bias_term())
         {
@@ -72,7 +63,7 @@ namespace caffe
                 // or blobs.size == 0 && bottom.size == 2
                 bias_param_id_ = this->blobs_.size();
                 this->blobs_.resize(bias_param_id_ + 1);
-                this->blobs_[bias_param_id_] = bias_layer_->blobs()[0];
+                this->blobs_[bias_param_id_] = bias_layer_->blobs()[0]; //可学习参数beta
             }
             else
             {
@@ -80,9 +71,7 @@ namespace caffe
                 bias_param_id_ = this->blobs_.size() - 1;
                 bias_layer_->blobs()[0] = this->blobs_[bias_param_id_];
             }
-            bias_propagate_down_.resize(1, false);
         }
-        // this->param_propagate_down_.resize(this->blobs_.size(), true);
     }
 
     template <typename Dtype>
@@ -110,14 +99,7 @@ namespace caffe
         outer_dim_ = bottom[0]->count(0, axis_);
         scale_dim_ = scale->count();
         inner_dim_ = bottom[0]->count(axis_ + scale->num_axes());
-        if (bottom[0] == top[0])
-        { // in-place computation
-            temp_.ReshapeLike(*bottom[0]);
-        }
-        else
-        {
-            top[0]->ReshapeLike(*bottom[0]);
-        }
+        top[0]->ReshapeLike(*bottom[0]);
         sum_result_.Reshape(vector<int>(1, outer_dim_ * scale_dim_));
         const int sum_mult_size = std::max(outer_dim_, inner_dim_);
         sum_multiplier_.Reshape(vector<int>(1, sum_mult_size));
@@ -137,15 +119,6 @@ namespace caffe
         const vector<Blob<Dtype> *> &bottom, const vector<Blob<Dtype> *> &top)
     {
         const Dtype *bottom_data = bottom[0]->cpu_data();
-        if (bottom[0] == top[0])
-        {
-            // In-place computation; need to store bottom data before overwriting it.
-            // Note that this is only necessary for Backward; we could skip this if not
-            // doing Backward, but Caffe currently provides no way of knowing whether
-            // we'll need to do Backward at the time of the Forward call.
-            caffe_copy(bottom[0]->count(), bottom[0]->cpu_data(),
-                       temp_.mutable_cpu_data());
-        }
         const Dtype *scale_data =
             ((bottom.size() > 1) ? bottom[1] : this->blobs_[0].get())->cpu_data();
         Dtype *top_data = top[0]->mutable_cpu_data();

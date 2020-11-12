@@ -39,8 +39,6 @@ namespace caffe
         round_mode_ = pool_param.round_mode();
         if (global_pooling_)
         {
-            // kernel_h_ = bottom[0]->height();
-            // kernel_w_ = bottom[0]->width();
             kernel_h_ = bottom[0]->shape(2);
             kernel_w_ = bottom[0]->shape(3);
         }
@@ -96,38 +94,18 @@ namespace caffe
     {
         CHECK_EQ(4, bottom[0]->num_axes()) << "Input must have 4 axes, "
                                            << "corresponding to (num, channels, height, width)";
-        // channels_ = bottom[0]->channels();
-        // height_ = bottom[0]->height();
-        // width_ = bottom[0]->width();
         channels_ = bottom[0]->shape(1);
         height_ = bottom[0]->shape(2);
         width_ = bottom[0]->shape(3);
-        if (global_pooling_)
-        {
-            kernel_h_ = bottom[0]->shape(2);
-            kernel_w_ = bottom[0]->shape(3);
-        }
         switch (round_mode_)
         {
         case PoolingParameter_RoundMode_CEIL:
-            pooled_height_ = static_cast<int>(ceil(static_cast<float>(
-                                                       height_ + 2 * pad_h_ - kernel_h_) /
-                                                   stride_h_)) +
-                             1;
-            pooled_width_ = static_cast<int>(ceil(static_cast<float>(
-                                                      width_ + 2 * pad_w_ - kernel_w_) /
-                                                  stride_w_)) +
-                            1;
+            pooled_height_ = static_cast<int>(ceil(static_cast<float>(height_ + 2 * pad_h_ - kernel_h_) / stride_h_)) + 1;
+            pooled_width_ = static_cast<int>(ceil(static_cast<float>(width_ + 2 * pad_w_ - kernel_w_) / stride_w_)) + 1;
             break;
         case PoolingParameter_RoundMode_FLOOR:
-            pooled_height_ = static_cast<int>(floor(static_cast<float>(
-                                                        height_ + 2 * pad_h_ - kernel_h_) /
-                                                    stride_h_)) +
-                             1;
-            pooled_width_ = static_cast<int>(floor(static_cast<float>(
-                                                       width_ + 2 * pad_w_ - kernel_w_) /
-                                                   stride_w_)) +
-                            1;
+            pooled_height_ = static_cast<int>(floor(static_cast<float>(height_ + 2 * pad_h_ - kernel_h_) / stride_h_)) + 1;
+            pooled_width_ = static_cast<int>(floor(static_cast<float>(width_ + 2 * pad_w_ - kernel_w_) / stride_w_)) + 1;
             break;
         default:
             LOG(FATAL) << "Unknown rounding mode.";
@@ -234,6 +212,7 @@ namespace caffe
                         }
                     }
                     // compute offset
+                    // TODO 为什么要计算偏移,不知连续存储的吗
                     bottom_data += bottom[0]->offset(0, 1);
                     top_data += top[0]->offset(0, 1);
                     if (use_top_mask)

@@ -1,6 +1,10 @@
 #ifndef _CAFFE_UTIL_IM2COL_HPP_
 #define _CAFFE_UTIL_IM2COL_HPP_
 
+/*
+* 结合网站 https://blog.csdn.net/jiongnima/article/details/69736844 更容易理解
+*/
+
 namespace caffe
 {
     template <typename Dtype>

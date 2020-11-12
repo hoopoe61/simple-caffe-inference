@@ -11,12 +11,15 @@ namespace caffe
 
     // Caffe gemm provides a simpler interface to the gemm functions, with the
     // limitation that the data has to be contiguous in memory.
+    // C = alpha * A * B + beta * C
     template <typename Dtype>
     void caffe_cpu_gemm(const CBLAS_TRANSPOSE TransA,
                         const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
                         const Dtype alpha, const Dtype *A, const Dtype *B, const Dtype beta,
                         Dtype *C);
 
+    //y = alphat * A * x + beta * y
+    //其中x,y是向量,A是矩阵
     template <typename Dtype>
     void caffe_cpu_gemv(const CBLAS_TRANSPOSE TransA, const int M, const int N,
                         const Dtype alpha, const Dtype *A, const Dtype *x, const Dtype beta,
@@ -41,15 +44,18 @@ namespace caffe
         memset(X, alpha, N); // NOLINT(caffe/alt_fn)
     }
 
+    //给 Y 的每个 element 加上常数 alpha
     template <typename Dtype>
     void caffe_add_scalar(const int N, const Dtype alpha, Dtype *X);
 
     template <typename Dtype>
     void caffe_scal(const int N, const Dtype alpha, Dtype *X);
 
+    //每个元素进行平方
     template <typename Dtype>
     void caffe_sqr(const int N, const Dtype *a, Dtype *y);
 
+    //每个元素进行开方
     template <typename Dtype>
     void caffe_sqrt(const int N, const Dtype *a, Dtype *y);
 
@@ -112,7 +118,7 @@ namespace caffe
         for (int i = 0; i < n; ++i)                              \
         {                                                        \
             operation;                                           \
-        }                                                           \
+        }                                                        \
     }
 
     // output is 1 for the positives, 0 for zero, and -1 for the negatives
@@ -127,6 +133,7 @@ namespace caffe
 
     DEFINE_CAFFE_CPU_UNARY_FUNC(fabs, y[i] = std::fabs(x[i]))
 
+    // y = alpha * x
     template <typename Dtype>
     void caffe_cpu_scale(const int n, const Dtype alpha, const Dtype *x, Dtype *y);
 

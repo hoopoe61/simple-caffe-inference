@@ -1,5 +1,9 @@
 #include "caffe/layers/base_conv_layer.hpp"
 
+/*
+* 结合 https://blog.csdn.net/jiongnima/article/details/69055941 一起阅读,效果更加
+*/
+
 namespace caffe
 {
     template <typename Dtype>
@@ -189,8 +193,10 @@ namespace caffe
                 this->blobs_[1].reset(new Blob<Dtype>(bias_shape));
             }
         }
-        kernel_dim_ = this->blobs_[0]->count(1);                    // input_channel*kernel_height*kernel_width
-        weight_offset_ = conv_out_channels_ * kernel_dim_ / group_; //权重偏移量 c_out*c_in*k_h*k_w
+        // 获取一个输出通道对应的所有卷积核对输入的一个卷积组所有通道操作一次处理数据量大小，为(输入总通道数/卷积组数)*卷积核高*卷积核宽
+        // 可以理解成im2col中的列,表示特征图的单次卷积区域的计算量
+        kernel_dim_ = this->blobs_[0]->count(1);
+        weight_offset_ = conv_out_channels_ * kernel_dim_ / group_; //权重偏移量 c_out*c_in*k_h*k_w,可以理解成下一组卷积时需要的跳过的地址偏移
     }
 
     template <typename Dtype>
@@ -234,8 +240,12 @@ namespace caffe
         {
             conv_out_spatial_dim_ = top[0]->count(first_spatial_axis); // feature_height * feature_width
         }
-        col_offset_ = kernel_dim_ * conv_out_spatial_dim_;                    //TODO c_in*k_h*k_w*f_h*f_w 行偏移量?
-        output_offset_ = conv_out_channels_ * conv_out_spatial_dim_ / group_; //输出偏移量 c_out*f_h/f_w
+        // c_in*k_h*k_w*f_h*f_w
+        // col_offset表征了一个输出通道对应的所有卷积核处理的一个卷积组的所有数据量
+        col_offset_ = kernel_dim_ * conv_out_spatial_dim_;
+        // output_offset_表征了一个卷积组输出的所有数据量
+        // 输出偏移量 c_out*f_h*f_w
+        output_offset_ = conv_out_channels_ * conv_out_spatial_dim_ / group_;
         // Setup input dimensions (conv_input_shape_).
         vector<int> bottom_dim_blob_shape(1, num_spatial_axes_ + 1); //[3]
         conv_input_shape_.Reshape(bottom_dim_blob_shape);
@@ -272,12 +282,12 @@ namespace caffe
         col_buffer_.Reshape(col_buffer_shape_);
         bottom_dim_ = bottom[0]->count(channel_axis_);                   // 表明每个batch的偏移量,总共有num_个batch
         top_dim_ = top[0]->count(channel_axis_);                         // 表明每个batch的偏移量,总共有num_个batch
-        num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_; //卷积核的数目
+        num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_; //卷积核的数目,描述了一个输出通道对应的所有卷积核对全部输入做卷积操作时转换生成的列向量的数量
         // Set up the all ones "bias multiplier" for adding biases by BLAS
         // 将"bias multiplier"全部设置为1,为了后面计算bias方便
         // bias的数目是top blob的空间shape
         // TODO 如果不使用bias,是否在这里可省下空间
-        out_spatial_dim_ = top[0]->count(first_spatial_axis);
+        out_spatial_dim_ = top[0]->count(first_spatial_axis); //描述了输出的单通道数据量
         if (bias_term_)
         {
             vector<int> bias_multiplier_shape(1, out_spatial_dim_);
@@ -297,12 +307,13 @@ namespace caffe
             // 如果不是1*1的操作
             if (!skip_im2col)
             {
-                conv_im2col_cpu(input, col_buffer_.mutable_cpu_data());
+                conv_im2col_cpu(input, col_buffer_.mutable_cpu_data()); //将特征图进行im2col转换
             }
             col_buff = col_buffer_.cpu_data();
         }
         for (int g = 0; g < group_; ++g)
         {
+            // 这里的weight已经是按连续顺序进行存储的,所以无需进行im2col转换
             caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, conv_out_channels_ / group_, conv_out_spatial_dim_, kernel_dim_,
                                   (Dtype)1., weights + weight_offset_ * g, col_buff + col_offset_ * g,
                                   (Dtype)0., output + output_offset_ * g);
