@@ -35,8 +35,8 @@ int main(int argc, char **argv)
     std::cout << "Finish loading" << std::endl;
 
     Blob<float> *input_layer = caffe_net.input_blobs()[0];
-    input_layer->Reshape(vector<int>{1, 3, 224, 112});
-    caffe_net.Reshape();
+    // input_layer->Reshape(vector<int>{1, 3, 224, 112});
+    // caffe_net.Reshape();
 
     float *input_data = input_layer->mutable_cpu_data();
     for (int i = 0; i < 3 * 224 * 112; ++i)
