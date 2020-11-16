@@ -2,7 +2,7 @@
 
 #### 介绍
 此项目是基于原版caffe进行精简和重构，值具有CPU推理功能，用于了解推理框架的原理。
-请参考我的博客：[xxx](https://www.cnblogs.com/dengshunge/)
+请参考我的博客：[基于CPU版本的Caffe推理框架](https://www.cnblogs.com/dengshunge/p/13972872.html)
 此简化的SimpleCaffe具有以下特点：
 1. 只有CPU推理功能，无需GPU；
 2. 只有前向计算能力，无后向求导功能；
