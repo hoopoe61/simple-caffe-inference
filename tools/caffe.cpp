@@ -27,6 +27,7 @@ int main(int argc, char **argv)
 
     //设置工作模式:CPU or GPU
     std::cout << "Use CPU" << std::endl;
+    ::google::InitGoogleLogging("caffe");//初始化日志文件,不调用会给出警告,但不会报错
     Caffe::set_mode(Caffe::CPU);
     Caffe::set_solver_rank(1); //不进行日志输出
 

@@ -16,7 +16,7 @@ namespace caffe
   }
 
   Caffe::Caffe()
-      : mode_(Caffe::CPU),solver_rank_(0)
+      : mode_(Caffe::CPU), solver_rank_(0)
   {
   }
 
