@@ -31,5 +31,5 @@ make -j4
 ```
 
 #### 本机环境
-本物理机是Ubuntu16.04，可以正常运行。
+本物理机是Ubuntu16.04，可以正常运行。模型来自于[SqueezeNet](https://github.com/forresti/SqueezeNet)
 
