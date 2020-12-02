@@ -5,8 +5,10 @@
 
 #else // Normal GPU + CPU Caffe.
 
+#include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include "caffe/util/cudnn.hpp"
 
 #endif
 
@@ -24,6 +26,14 @@
         CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
     } while (0)
 
+#define CUBLAS_CHECK(condition)                                                         \
+    do                                                                                  \
+    {                                                                                   \
+        cublasStatus_t status = condition;                                              \
+        CHECK_EQ(status, CUBLAS_STATUS_SUCCESS) << " "                                  \
+                                                << caffe::cublasGetErrorString(status); \
+    } while (0)
+
 // CUDA: grid stride looping
 #define CUDA_KERNEL_LOOP(i, n)                          \
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
@@ -32,6 +42,9 @@
 
 namespace caffe
 {
+    // CUDA: library error reporting.
+    const char *cublasGetErrorString(cublasStatus_t error);
+
     // CUDA: use 512 threads per block
     // 每个block开512个线程
     const int CAFFE_CUDA_NUM_THREADS = 512;

@@ -82,6 +82,11 @@ namespace caffe
             GPU
         };
 
+        inline static cublasHandle_t cublas_handle()
+        {
+            return Get().cublas_handle_;
+        }
+
         // Returns the mode: running on CPU or GPU.
         inline static Brew mode() { return Get().mode_; }
         // The setters for the variables
@@ -94,6 +99,7 @@ namespace caffe
         inline static bool root_solver() { return Get().solver_rank_ == 0; }      //用于控制是否输出LOG信息
 
     protected:
+        cublasHandle_t cublas_handle_;
         Brew mode_;
         int solver_rank_;
 

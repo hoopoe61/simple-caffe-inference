@@ -81,7 +81,7 @@ function(caffe_pickup_caffe_sources root)
 
   # collect cuda files
   #file(GLOB    test_cuda ${root}/src/caffe/test/test_*.cu)
-  #file(GLOB_RECURSE cuda ${root}/src/caffe/*.cu)
+  file(GLOB_RECURSE cuda ${root}/src/caffe/*.cu)
   #list(REMOVE_ITEM  cuda ${test_cuda})
 
   # add proto to make them editable in IDEs too
@@ -90,13 +90,13 @@ function(caffe_pickup_caffe_sources root)
 
   # convert to absolute paths
   caffe_convert_absolute_paths(srcs)
-  #caffe_convert_absolute_paths(cuda)
+  caffe_convert_absolute_paths(cuda)
   #caffe_convert_absolute_paths(test_srcs)
   #caffe_convert_absolute_paths(test_cuda)
 
   # propagate to parent scope
   set(srcs ${srcs} PARENT_SCOPE)
-  #set(cuda ${cuda} PARENT_SCOPE)
+  set(cuda ${cuda} PARENT_SCOPE)
   #set(test_srcs ${test_srcs} PARENT_SCOPE)
   #set(test_cuda ${test_cuda} PARENT_SCOPE)
 endfunction()
