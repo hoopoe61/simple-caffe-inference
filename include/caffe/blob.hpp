@@ -157,7 +157,11 @@ namespace caffe
 
     const Dtype *cpu_data() const;
     void set_cpu_data(Dtype *data);
+    const int *gpu_shape() const;
+    const Dtype *gpu_data() const;
+    void set_gpu_data(Dtype *data);
     Dtype *mutable_cpu_data();
+    Dtype *mutable_gpu_data();
     void FromProto(const BlobProto &proto, bool reshape = true); //从另外一个blob中读取数据
 
     /**

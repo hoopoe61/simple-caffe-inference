@@ -89,6 +89,41 @@ namespace caffe
   }
 
   template <typename Dtype>
+  const int *Blob<Dtype>::gpu_shape() const
+  {
+    //同步至gpu的数据
+    CHECK(shape_data_);
+    return (const int *)shape_data_->gpu_data();
+  }
+
+  template <typename Dtype>
+  const Dtype *Blob<Dtype>::gpu_data() const
+  {
+    CHECK(data_);
+    return (const Dtype *)data_->gpu_data();
+  }
+
+  template <typename Dtype>
+  void Blob<Dtype>::set_gpu_data(Dtype *data)
+  {
+    CHECK(data);
+    // Make sure CPU and GPU sizes remain equal
+    size_t size = count_ * sizeof(Dtype);
+    if (data_->size() != size)
+    {
+      data_.reset(new SyncedMemory(size));
+    }
+    data_->set_gpu_data(data);
+  }
+
+  template <typename Dtype>
+  Dtype *Blob<Dtype>::mutable_gpu_data()
+  {
+    CHECK(data_);
+    return static_cast<Dtype *>(data_->mutable_gpu_data());
+  }
+
+  template <typename Dtype>
   void Blob<Dtype>::ShareData(const Blob &other)
   {
     CHECK_EQ(count_, other.count());
