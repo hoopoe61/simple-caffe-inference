@@ -10,9 +10,9 @@
 #define CUDNN_VERSION_MIN(major, minor, patch) \
     (CUDNN_VERSION >= (major * 1000 + minor * 100 + patch))
 
-#if CUDNN_VERSION_MIN(8, 0, 1)
-#include <cudnn_ops_infer.h>
-#endif
+// #if CUDNN_VERSION_MIN(8, 0, 1)
+// #include <cudnn_cnn_infer.h>
+// #endif
 
 #define CUDNN_CHECK(condition)                                                 \
     do                                                                         \

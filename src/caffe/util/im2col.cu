@@ -47,6 +47,30 @@ namespace caffe
         }
     }
 
+    template <typename Dtype>
+    void im2col_gpu(const Dtype* data_im, const int channels,
+        const int height, const int width, const int kernel_h, const int kernel_w,
+        const int pad_h, const int pad_w,
+        const int stride_h, const int stride_w,
+        const int dilation_h, const int dilation_w,
+        Dtype* data_col) 
+    {
+        // We are going to launch channels * height_col * width_col kernels, each
+        // kernel responsible for copying a single-channel grid.
+        int height_col = (height + 2 * pad_h -
+            (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
+        int width_col = (width + 2 * pad_w -
+            (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
+        int num_kernels = channels * height_col * width_col;
+        // NOLINT_NEXT_LINE(whitespace/operators)
+        im2col_gpu_kernel<Dtype><<<CAFFE_GET_BLOCKS(num_kernels),
+                                    CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, height, width, kernel_h, kernel_w, pad_h,
+            pad_w, stride_h, stride_w, dilation_h, dilation_w, height_col,
+            width_col, data_col);
+        CUDA_POST_KERNEL_CHECK;
+    }
+
     // Explicit instantiation
     template void im2col_gpu<float>(const float* data_im, const int channels,
         const int height, const int width, const int kernel_h, const int kernel_w,
@@ -159,4 +183,91 @@ namespace caffe
         }  // CUDA_KERNEL_LOOP(index, n)  
     }
 
+    template <typename Dtype>
+    void im2col_nd_gpu(const Dtype* data_im, const int num_spatial_axes,
+        const int num_kernels, const int* im_shape, const int* col_shape,
+        const int* kernel_shape, const int* pad, const int* stride,
+        const int* dilation, Dtype* data_col) {
+    // num_axes should be smaller than block size
+    DCHECK_LT(num_spatial_axes, CAFFE_CUDA_NUM_THREADS);
+    switch (num_spatial_axes) {
+    case 1:
+        im2col_nd_gpu_kernel<Dtype, 1>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 2:
+        im2col_nd_gpu_kernel<Dtype, 2>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 3:
+        im2col_nd_gpu_kernel<Dtype, 3>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 4:
+        im2col_nd_gpu_kernel<Dtype, 4>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 5:
+        im2col_nd_gpu_kernel<Dtype, 5>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 6:
+        im2col_nd_gpu_kernel<Dtype, 6>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 7:
+        im2col_nd_gpu_kernel<Dtype, 7>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 8:
+        im2col_nd_gpu_kernel<Dtype, 8>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 9:
+        im2col_nd_gpu_kernel<Dtype, 9>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    case 10:
+        im2col_nd_gpu_kernel<Dtype, 10>  // NOLINT_NEXT_LINE(whitespace/operators)
+            <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+            num_kernels, data_im, im_shape, col_shape,
+            kernel_shape, pad, stride, dilation, data_col);
+        break;
+    default:
+        LOG(FATAL) << "im2col_nd_gpu does not support computation with "
+                << num_spatial_axes << " spatial axes";
+    }
+        CUDA_POST_KERNEL_CHECK;
+    }
+
+    // Explicit instantiation
+    template void im2col_nd_gpu<float>(const float* data_im,
+        const int num_spatial_axes, const int col_size,
+        const int* im_shape, const int* col_shape,
+        const int* kernel_shape, const int* pad, const int* stride,
+        const int* dilation, float* data_col);
+    template void im2col_nd_gpu<double>(const double* data_im,
+        const int num_spatial_axes, const int col_size,
+        const int* im_shape, const int* col_shape,
+        const int* kernel_shape, const int* pad, const int* stride,
+        const int* dilation, double* data_col);
+        
 }

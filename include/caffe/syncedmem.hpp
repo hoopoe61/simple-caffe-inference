@@ -22,7 +22,8 @@ namespace caffe
             // 调用cudaMallocHost()为主机分配内存,分配的内存可以让host和device共同访问,类似于cudaMallocManaged()
             // 优点是cudaMallocHost()会自动自用某些函数,如cudaMemcpy()
             // 缺点是大量使用cudaMallocHost()会减少系统的可用内存.
-            CUDA_CHECK(cudaMallocHost(ptr, size)); //TODO(dengshunge) 可以尝试用cudaMallocManage来进行管理
+            // 进行过实验,使用cudaMallocManaged()的速度会更慢
+            CUDA_CHECK(cudaMallocHost(ptr, size));
             *use_cuda = true;
         }
         else

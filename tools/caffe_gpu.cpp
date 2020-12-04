@@ -44,11 +44,11 @@ int main(int argc, char **argv)
 
     boost::posix_time::ptime start_time_ = boost::posix_time::microsec_clock::local_time(); //开始计时
 
-    for (int i = 0; i < 500; ++i)
+    for (int i = 0; i < 1000; ++i)
         caffe_net.Forward();
 
     boost::posix_time::ptime end_time_ = boost::posix_time::microsec_clock::local_time(); //结束计时
-    std::cout << "average time : " << (end_time_ - start_time_).total_milliseconds() / 500. << " ms" << std::endl;
+    std::cout << "average time : " << (end_time_ - start_time_).total_milliseconds() / 1000. << " ms" << std::endl;
 }
 
 #else

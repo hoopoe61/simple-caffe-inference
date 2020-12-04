@@ -1,15 +1,12 @@
 #ifndef CAFFE_UTIL_IO_H_
 #define CAFFE_UTIL_IO_H_
 
-#include <boost/filesystem.hpp>
-
 #include "google/protobuf/message.h"
 
 #include "caffe/common.hpp"
 
 namespace caffe
 {
-    using ::boost::filesystem::path;
     using ::google::protobuf::Message;
 
     // 从text中读取Proto

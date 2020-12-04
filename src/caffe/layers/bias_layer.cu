@@ -12,7 +12,7 @@ namespace caffe
     {
         CUDA_KERNEL_LOOP(index, n)
         {
-            const int bias_index = (index / inner_dim) % bias_dim;//TODO(dengshunge) 理解一下这个参数
+            const int bias_index = (index / inner_dim) % bias_dim;
             out[index] = in[index] + bias[bias_index];
         }
     }

@@ -196,7 +196,6 @@ namespace caffe
         //层状态 test
         Phase phase_;
         /** The vector that stores the learnable parameters as a set of blobs. */
-        //TODO 这里没有用到这个参数,这个参数的作用是?
         vector<shared_ptr<Blob<Dtype>>> blobs_; //存储可学习的参数
 
         /** @brief Using the CPU device, compute the layer output. */

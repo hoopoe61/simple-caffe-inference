@@ -18,7 +18,7 @@ namespace caffe
             caffe_gpu_gemv<Dtype>(CblasNoTrans, N_, K_, (Dtype)1., weight, bottom_data, (Dtype)0., top_data);
             if (bias_term_)
                 caffe_gpu_axpy<Dtype>(N_, bias_multiplier_.cpu_data()[0],
-                    bottom.size() == 3 ? bottom[2]->gpu_data() : this->blobs_[1]->gpu_data(), top_data);//TODO(dengshunge) 能否是gpu_data()
+                    bottom.size() == 3 ? bottom[2]->gpu_data() : this->blobs_[1]->gpu_data(), top_data);
         }
         else
         {

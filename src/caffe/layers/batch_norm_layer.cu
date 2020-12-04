@@ -21,7 +21,7 @@ namespace caffe
         }
 
         // use the stored mean/variance estimates.
-        const Dtype scale_factor = this->blobs_[2]->cpu_data()[0] == 0 ? 0 : 1 / this->blobs_[2]->cpu_data()[0];//TODO(dengshunge) 能否换成gpu_data()?
+        const Dtype scale_factor = this->blobs_[2]->cpu_data()[0] == 0 ? 0 : 1 / this->blobs_[2]->cpu_data()[0];
         caffe_gpu_scale(mean_.count(), scale_factor,
                         this->blobs_[0]->gpu_data(), mean_.mutable_gpu_data());
         caffe_gpu_scale(variance_.count(), scale_factor,

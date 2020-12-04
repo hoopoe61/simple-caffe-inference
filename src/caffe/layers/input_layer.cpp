@@ -6,7 +6,6 @@ namespace caffe
     void InputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype> *> &bottom,
                                        const vector<Blob<Dtype> *> &top)
     {
-        //TODO 理解一下这里
         const int num_top = top.size();
         const InputParameter &param = this->layer_param_.input_param();
         const int num_shape = param.shape_size();
