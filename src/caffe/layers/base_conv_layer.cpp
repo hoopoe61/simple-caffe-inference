@@ -329,6 +329,39 @@ namespace caffe
                               (Dtype)1., output);
     }
 
+#ifndef CPU_ONLY
+    template <typename Dtype>
+    void BaseConvolutionLayer<Dtype>::forward_gpu_gemm(const Dtype *input,
+                                                       const Dtype *weights, Dtype *output, bool skip_im2col)
+    {
+        const Dtype *col_buff = input;
+        if (!is_1x1_)
+        {
+            if (!skip_im2col)
+            {
+                conv_im2col_gpu(input, col_buffer_.mutable_gpu_data());
+            }
+            col_buff = col_buffer_.gpu_data();
+        }
+        for (int g = 0; g < group_; ++g)
+        {
+            caffe_gpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, conv_out_channels_ / group_, conv_out_spatial_dim_, kernel_dim_,
+                                  (Dtype)1., weights + weight_offset_ * g, col_buff + col_offset_ * g,
+                                  (Dtype)0., output + output_offset_ * g);
+        }
+    }
+
+    template <typename Dtype>
+    void BaseConvolutionLayer<Dtype>::forward_gpu_bias(Dtype *output,
+                                                       const Dtype *bias)
+    {
+        caffe_gpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, num_output_,
+                              out_spatial_dim_, 1, (Dtype)1., bias, bias_multiplier_.gpu_data(),
+                              (Dtype)1., output);
+    }
+
+#endif //CPU_ONLY
+
     INSTANTIATE_CLASS(BaseConvolutionLayer);
 
 } // namespace caffe

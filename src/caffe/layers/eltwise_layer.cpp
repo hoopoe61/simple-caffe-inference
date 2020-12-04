@@ -48,9 +48,9 @@ namespace caffe
     void EltwiseLayer<Dtype>::Forward_cpu(
         const vector<Blob<Dtype> *> &bottom, const vector<Blob<Dtype> *> &top)
     {
-        int *mask = NULL;
-        const Dtype *bottom_data_a = NULL;
-        const Dtype *bottom_data_b = NULL;
+        int *mask = nullptr;
+        const Dtype *bottom_data_a = nullptr;
+        const Dtype *bottom_data_b = nullptr;
         const int count = top[0]->count();
         Dtype *top_data = top[0]->mutable_cpu_data();
         switch (op_)

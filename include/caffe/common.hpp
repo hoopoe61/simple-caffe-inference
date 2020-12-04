@@ -43,6 +43,17 @@ private:                                   \
     template class classname<float>;     \
     template class classname<double>
 
+#define INSTANTIATE_LAYER_GPU_FORWARD(classname) \
+  template void classname<float>::Forward_gpu(   \
+      const std::vector<Blob<float> *> &bottom,  \
+      const std::vector<Blob<float> *> &top);    \
+  template void classname<double>::Forward_gpu(  \
+      const std::vector<Blob<double> *> &bottom, \
+      const std::vector<Blob<double> *> &top);
+
+#define INSTANTIATE_LAYER_GPU_FUNCS(classname) \
+  INSTANTIATE_LAYER_GPU_FORWARD(classname);    \
+
 // A simple macro to mark codes that are not implemented, so that when the code
 // is executed we will see a fatal log.
 #define NOT_IMPLEMENTED LOG(FATAL) << "Not Implemented Yet"

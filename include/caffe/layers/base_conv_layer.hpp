@@ -35,6 +35,11 @@ namespace caffe
         void forward_cpu_gemm(const Dtype *input, const Dtype *weights,
                               Dtype *output, bool skip_im2col = false);
         void forward_cpu_bias(Dtype *output, const Dtype *bias);
+#ifndef CPU_ONLY
+        void forward_gpu_gemm(const Dtype *col_input, const Dtype *weights,
+                              Dtype *output, bool skip_im2col = false);
+        void forward_gpu_bias(Dtype *output, const Dtype *bias);
+#endif //CPU_ONLY
 
         /// @brief The spatial dimensions of the input.
         inline int input_shape(int i)
@@ -101,6 +106,29 @@ namespace caffe
                               pad_.cpu_data(), stride_.cpu_data(), dilation_.cpu_data(), col_buff);
             }
         }
+
+#ifndef CPU_ONLY
+        inline void conv_im2col_gpu(const Dtype *data, Dtype *col_buff)
+        {
+            if (!force_nd_im2col_ && num_spatial_axes_ == 2)
+            {
+                // 对数据转换成im2col
+                im2col_gpu(data, conv_in_channels_,
+                           conv_input_shape_.cpu_data()[1], conv_input_shape_.cpu_data()[2],
+                           kernel_shape_.cpu_data()[0], kernel_shape_.cpu_data()[1],
+                           pad_.cpu_data()[0], pad_.cpu_data()[1],
+                           stride_.cpu_data()[0], stride_.cpu_data()[1],
+                           dilation_.cpu_data()[0], dilation_.cpu_data()[1], col_buff); //TODO(dengshunge) 为什么这里传入的是cpu_data
+            }
+            else
+            {
+                im2col_nd_gpu(data, num_spatial_axes_, num_kernels_im2col_,
+                              conv_input_shape_.gpu_data(), col_buffer_.gpu_shape(),
+                              kernel_shape_.gpu_data(), pad_.gpu_data(),
+                              stride_.gpu_data(), dilation_.gpu_data(), col_buff);
+            }
+        }
+#endif //CPU_ONLY
 
         int num_kernels_im2col_;
         int conv_out_channels_;

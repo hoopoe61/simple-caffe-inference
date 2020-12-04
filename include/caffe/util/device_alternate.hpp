@@ -40,6 +40,10 @@
          i < (n);                                       \
          i += blockDim.x * gridDim.x)
 
+// CUDA: check for error after kernel execution and exit loudly if there is one.
+// 检查最后返回的信息是否错误
+#define CUDA_POST_KERNEL_CHECK CUDA_CHECK(cudaPeekAtLastError())
+
 namespace caffe
 {
     // CUDA: library error reporting.

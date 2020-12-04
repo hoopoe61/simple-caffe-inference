@@ -8,6 +8,9 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #endif // USE_OPENCV
 
+// 用于计时
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 using caffe::Blob;
 using caffe::Caffe;
 using caffe::Layer;
@@ -27,7 +30,7 @@ int main(int argc, char **argv)
 
     //设置工作模式:CPU or GPU
     std::cout << "Use GPU" << std::endl;
-    ::google::InitGoogleLogging("caffe"); //初始化日志文件,不调用会给出警告,但不会报错
+    // ::google::InitGoogleLogging("caffe"); //初始化日志文件,不调用会给出警告,但不会报错
     Caffe::set_mode(Caffe::GPU);
     Caffe::set_solver_rank(1); //不进行日志输出
 
@@ -39,7 +42,13 @@ int main(int argc, char **argv)
     // input_layer->Reshape(vector<int>{1, 3, 227, 227});
     // caffe_net.Reshape();
 
-    caffe_net.Forward();
+    boost::posix_time::ptime start_time_ = boost::posix_time::microsec_clock::local_time(); //开始计时
+
+    for (int i = 0; i < 500; ++i)
+        caffe_net.Forward();
+
+    boost::posix_time::ptime end_time_ = boost::posix_time::microsec_clock::local_time(); //结束计时
+    std::cout << "average time : " << (end_time_ - start_time_).total_milliseconds() / 500. << " ms" << std::endl;
 }
 
 #else
@@ -99,9 +108,13 @@ int main()
     vector<float> scale{1.0, 1.0, 1.0};
     Preprocess(img, width, height, mean, scale, input_data);
 
+    boost::posix_time::ptime start_time_ = boost::posix_time::microsec_clock::local_time(); //开始计时
+
     //前向运算
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < 500; ++i)
         caffe_net.Forward();
+
+    boost::posix_time::ptime end_time_ = boost::posix_time::microsec_clock::local_time(); //结束计时
 
     /* Copy the output layer to a std::vector */
     Blob<float> *output_layer = caffe_net.output_blobs()[0];
@@ -111,6 +124,7 @@ int main()
 
     cout << "true index = 263 prob = 0.8277238" << endl;
     cout << "pred : " << results[263] << endl;
+    std::cout << "average time : " << (end_time_ - start_time_).total_milliseconds() / 500. << " ms" << std::endl;
 }
 
 #endif

@@ -93,19 +93,18 @@ namespace caffe
     {
         if (X != Y)
         {
-            //             if (Caffe::mode() == Caffe::GPU)
-            //             {
-            // #ifndef CPU_ONLY
-            //                 // NOLINT_NEXT_LINE(caffe/alt_fn)
-            //                 CUDA_CHECK(cudaMemcpy(Y, X, sizeof(Dtype) * N, cudaMemcpyDefault));
-            // #else
-            //                 NO_GPU;
-            // #endif
-            //             }
-            //             else
-            //             {
-            memcpy(Y, X, sizeof(Dtype) * N); // NOLINT(caffe/alt_fn)
-            // }
+            if (Caffe::mode() == Caffe::GPU)
+            {
+#ifndef CPU_ONLY
+                CUDA_CHECK(cudaMemcpy(Y, X, sizeof(Dtype) * N, cudaMemcpyDefault));
+#else
+                NO_GPU;
+#endif
+            }
+            else
+            {
+                memcpy(Y, X, sizeof(Dtype) * N);
+            }
         }
     }
 
