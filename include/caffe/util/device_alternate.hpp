@@ -8,7 +8,7 @@
 #include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include "caffe/util/cudnn.hpp"
+// #include "caffe/util/cudnn.hpp"
 
 #endif
 

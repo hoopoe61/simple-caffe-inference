@@ -27,7 +27,7 @@ namespace caffe
 
 #else // Normal GPU + CPU Caffe.
   Caffe::Caffe()
-      : mode_(Caffe::CPU), solver_rank_(0), cublas_handle_(nullptr)
+      : mode_(Caffe::CPU), solver_rank_(0), cublas_handle_(NULL)
   {
     // Try to create a cublas handler, and report an error if failed (but we will
     // keep the program running as one might just want to run CPU code).
