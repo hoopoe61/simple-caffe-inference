@@ -43,16 +43,16 @@ private:                                   \
     template class classname<float>;     \
     template class classname<double>
 
-#define INSTANTIATE_LAYER_GPU_FORWARD(classname) \
-  template void classname<float>::Forward_gpu(   \
-      const std::vector<Blob<float> *> &bottom,  \
-      const std::vector<Blob<float> *> &top);    \
-  template void classname<double>::Forward_gpu(  \
-      const std::vector<Blob<double> *> &bottom, \
-      const std::vector<Blob<double> *> &top);
+#define INSTANTIATE_LAYER_GPU_FORWARD(classname)   \
+    template void classname<float>::Forward_gpu(   \
+        const std::vector<Blob<float> *> &bottom,  \
+        const std::vector<Blob<float> *> &top);    \
+    template void classname<double>::Forward_gpu(  \
+        const std::vector<Blob<double> *> &bottom, \
+        const std::vector<Blob<double> *> &top);
 
 #define INSTANTIATE_LAYER_GPU_FUNCS(classname) \
-  INSTANTIATE_LAYER_GPU_FORWARD(classname);    \
+    INSTANTIATE_LAYER_GPU_FORWARD(classname);
 
 // A simple macro to mark codes that are not implemented, so that when the code
 // is executed we will see a fatal log.
@@ -110,9 +110,9 @@ namespace caffe
         inline static bool root_solver() { return Get().solver_rank_ == 0; }      //用于控制是否输出LOG信息
 
     protected:
-        cublasHandle_t cublas_handle_;
         Brew mode_;
         int solver_rank_;
+        cublasHandle_t cublas_handle_;
 
     private:
         Caffe();
