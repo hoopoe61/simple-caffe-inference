@@ -100,7 +100,8 @@ namespace caffe
             CreatorRegistry &registry = Registry();
             //判断已经注册过
             CHECK_EQ(registry.count(type), 1) << "Unknown layer type: " << type;
-            return registry[type](param); //使用LayerParameter参数来初始化该层
+            // registry本身是一个map，通过这种方式就拿到了一个layer类的实例
+            return registry[type](param); //使用LayerParameter参数来初始化该层；
         }
 
     private:
@@ -129,6 +130,8 @@ namespace caffe
 
 // 每个层文件最后会调用该宏定义,然后会将相应的层进行注册
 // 如果没有定义creator,则会调用初始化函数来作为creator
+// 看起来是Creator_##type##Layer是创建了一个creator，但不知道这个creator是干啥的？
+// 应该是返回的是一个类：Layer<Dtype>，就是那些layer对应的类
 #define REGISTER_LAYER_CLASS(type)                                              \
     template <typename Dtype>                                                   \
     shared_ptr<Layer<Dtype>> Creator_##type##Layer(const LayerParameter &param) \

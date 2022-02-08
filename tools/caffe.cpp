@@ -22,6 +22,7 @@ using std::ostringstream;
 #ifndef USE_OPENCV
 int main(int argc, char **argv)
 {
+    // model 和 参数分开的设计也是挺神奇
     string model = "../model/deploy.prototxt";
     string weights = "../model/squeezenet_v1.1.caffemodel";
 
@@ -31,8 +32,9 @@ int main(int argc, char **argv)
     Caffe::set_mode(Caffe::CPU);
     Caffe::set_solver_rank(1); //不进行日志输出
 
-    Net<float> caffe_net(model, caffe::TEST, 0, nullptr);
-    caffe_net.CopyTrainedLayersFrom(weights);
+    // 这个过程中会读取model中的内容，然后初始化为一个model，然后被使用；去看proto的文件就可以看到，这里面只有name，type信息，并没有实际的这层layer如何进行reshape 和 计算等；
+    Net<float> caxffe_net(model, caffe::TEST, 0, nullptr); // 完成了net的init过程； 这个就是一个创建object的过程？
+    caffe_net.CopyTrainedLayersFrom(weights); //进行参数的复制
     std::cout << "Finish loading" << std::endl;
 
     // Blob<float> *input_layer = caffe_net.input_blobs()[0];

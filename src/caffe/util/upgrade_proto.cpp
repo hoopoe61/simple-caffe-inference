@@ -38,6 +38,7 @@ namespace caffe
         CHECK(ReadProtoFromTextFile(param_file, param))
             << "Failed to parse NetParameter file: " << param_file;
         //更新相关内容
+        std::cout<<param->input_size()<<std::endl;
         UpgradeNetAsNeeded(param_file, param);
     }
 
@@ -71,6 +72,7 @@ namespace caffe
             layer_param->set_type("Input");
             InputParameter *input_param = layer_param->mutable_input_param();
             // Convert input fields into a layer.
+            // 得到一个input的layer？是因为最底层的input是一个独立的存在？
             for (int i = 0; i < net_param->input_size(); ++i)
             {
                 layer_param->add_top(net_param->input(i));

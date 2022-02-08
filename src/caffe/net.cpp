@@ -21,7 +21,7 @@ namespace caffe
         }
         //设置level
         param.mutable_state()->set_level(level);
-        Init(param);
+        Init(param); 
     }
 
     template <typename Dtype>
@@ -31,6 +31,7 @@ namespace caffe
         phase_ = in_param.state().phase();
 
         // 2.根据每层的include/exclude规则和当前模型的phase,来构建网络
+        // include 和 exclude：按照规则进行layer的筛选，把符合条件的copy到filtered_param中
         NetParameter filtered_param;
         FilterNet(in_param, &filtered_param);
         LOG_IF(INFO, Caffe::root_solver())
@@ -56,8 +57,8 @@ namespace caffe
             param.mutable_layer(layer_id)->set_phase(phase_);
 
             // 创建层
-            const LayerParameter &layer_param = param.layer(layer_id);
-            layers_.push_back(LayerRegistry<Dtype>::CreateLayer(layer_param)); //调用工厂模式来创建,本质上是调用特定层的构造函数
+            const LayerParameter &layer_param = param.layer(layer_id); // 这里的layer_param只是记录里layer的名称这种信息？
+            layers_.push_back(LayerRegistry<Dtype>::CreateLayer(layer_param)); //调用工厂模式来创建,本质上是调用特定层的构造函数；等到一个layer的实例
             layer_names_.push_back(layer_param.name());
             LOG_IF(INFO, Caffe::root_solver())
                 << "Creating Layer " << layer_param.name();
@@ -97,10 +98,11 @@ namespace caffe
                     // Add "anonymous" top blobs -- do not modify available_blobs or
                     // blob_name_to_idx as we don't want these blobs to be usable as input
                     // to other layers.
+                    // blobs也是一种top？
                     AppendTop(param, layer_id, num_top, nullptr, nullptr);
                 }
             }
-            // 当该层连接完成后,创建该层
+            // 当该层连接完成后,创建该层；setup很重要；
             layers_[layer_id]->SetUp(bottom_vecs_[layer_id], top_vecs_[layer_id]); //调用layer.hpp中的SetUp()函数,这里传入了blob的指针
             LOG_IF(INFO, Caffe::root_solver())
                 << "Setting up " << layer_names_[layer_id];
@@ -128,7 +130,7 @@ namespace caffe
         {
             const LayerParameter &layer_param = param.layer(i);
             const string &layer_name = layer_param.name();
-            // 不能同时设置include和exclude
+            // 不能同时设置include和exclude，这个规则是设置在每个layer上的，不过这个include 和 exclude的作用是什么？
             CHECK(layer_param.include_size() == 0 || layer_param.exclude_size() == 0)
                 << "Specify either include rules or exclude rules; not both.";
             // 如果该层的include规则没有被指定,则默认是include,只有遇到exclude规则是,才将其排除在外
@@ -354,6 +356,7 @@ namespace caffe
                 continue;
             }
             DLOG(INFO) << "Copying source layer " << source_layer_name;
+            // 这里是与Net中layer有关系的地方，然后通过这个实现设置
             vector<shared_ptr<Blob<Dtype>>> &target_blobs =
                 layers_[target_layer_id]->blobs();
             CHECK_EQ(target_blobs.size(), source_layer.blobs_size())

@@ -16,7 +16,7 @@ namespace caffe
    *                                                       ----------
    * 
   */
-
+    // split层作用：划分一个input blob给多个output blobs使用；
     void InsertSplits(const NetParameter &param, NetParameter *param_split)
     {
         // 初始化相关网络参数,并清楚层相关信息
